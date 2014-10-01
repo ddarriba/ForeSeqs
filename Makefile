@@ -1,6 +1,6 @@
 CC=g++
-CFLAGS=-c -Wall -Ilibpll/include
-LDFLAGS=-Llibpll/lib
+CFLAGS=-g -Ilibpll/include -O4 -Wall
+LDFLAGS=-g -Llibpll/lib -O4 -Wall
 LIBS=-lpll-sse3 -lm
 
 SOURCES=src/SeqPred.cpp src/Predictor.cpp
@@ -13,7 +13,7 @@ $(EXECUTABLE): $(OBJECTS)
 	$(CC) $(LDFLAGS) $(OBJECTS) -o $@ $(LIBS)
 
 .cpp.o:
-	$(CC) $(CFLAGS) $< -o $@
+	$(CC) -c $(CFLAGS) $< -o $@
 
 oneline:
 	g++ -g -O2 -Ilibpll/include -Llibpll/lib -o seqpred src/SeqPred.cpp src/Predictor.cpp -lpll-sse3 -lm

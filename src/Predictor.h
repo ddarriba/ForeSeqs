@@ -31,12 +31,16 @@ private:
 	void mutateSequence ( char * currentSequence, char * ancestralSequence );
 	void evolveNode(nodeptr node, char * ancestralSequence);
 
-	pllInstance * tree;
-	unsigned int start, end, length;
-	partitionList * partitions;
-	std::vector<int> missingSequences;
+	pllInstance * tree;					/** PLL instance */
+	partitionList * partitions;			/** PLL list of partitions */
+	unsigned int start;					/** Starting position of the partition */
+	unsigned int end; 					/** Ending position of the partition */
+	unsigned int length;				/** Number of sites (length) of the partition */
+	int numStates;						/** Number of states (DNA=4, AA=20) */
+	int numRateCategories;				/** Number of gamma rate categories */
+	std::vector<int> missingSequences;	/** Vector of taxa with missing sequences */
 };
 
-} /* namespace partest */
+} /* namespace seqpred */
 
 #endif /* PREDICTOR_H_ */
