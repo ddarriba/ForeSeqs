@@ -76,10 +76,13 @@ int main(int argc, char * argv[]) {
 
 	pllNewickParseDestroy(&nt);
 
-	for (int i = 1; i <= (2 * pllTree->ntips - 3); i++) {
-		double bl = pllGetBranchLength(pllTree, pllTree->nodep[i], 0);
-		cout << pllTree->nodep[i]->z[0] << " " << bl << endl;
-	}
+//	for (int i = 1; i <= (2 * pllTree->ntips - 3); i++) {
+//		double bl = pllGetBranchLength(pllTree, pllTree->nodep[i], 0);
+//		cout << pllTree->nodep[i]->z[0] << " " << bl << endl;
+//	}
+	pllEvaluateLikelihood(pllTree, pllPartitions, pllTree->start, true, false);
+	cout << "TRACE: Initial log likelihood: " << pllTree->likelihood << endl;
+	pllOptimizeModelParameters(pllTree, pllPartitions, 0.1);
 
 	seqpred::Predictor sequencePredictor(pllTree, pllPartitions, 0);
 	sequencePredictor.predictMissingSequences();

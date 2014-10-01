@@ -9,6 +9,7 @@
 #include <iostream>
 #include <algorithm>
 #include <cstring>
+#include <limits.h>
 
 #define PRINT_ANCESTRAL 1
 
@@ -18,7 +19,7 @@ namespace seqpred {
 
 Predictor::Predictor(pllInstance * tree, partitionList * partitions,
 		int partitionNumber) :
-		tree(tree), partitions(partitions) {
+		tree(tree), partitions(partitions), partitionNumber(partitionNumber) {
 
 	/* get information from the partition */
 	start = partitions->partitionData[partitionNumber]->lower;
@@ -31,10 +32,22 @@ Predictor::Predictor(pllInstance * tree, partitionList * partitions,
 
 	/* get taxa with missing data in the partition */
 	missingSequences = findMissingSequences();
+
+	/* create the different states */
+	/* TODO: So far we set it to DNA states */
+	if (numStates != 4) {
+		cerr << " Not implemented yet for " << numStates << " states" << endl;
+		exit(1);
+	}
+	states.resize(numStates);
+	states[0] = 1; //A
+	states[1] = 2; //C
+	states[2] = 4; //G
+	states[3] = 8; //T
 }
 
 Predictor::~Predictor() {
-	// TODO Auto-generated destructor stub
+	/* nothing to do */
 }
 
 vector<int> Predictor::findMissingSequences() {
@@ -101,8 +114,35 @@ nodeptr Predictor::findMissingDataAncestor() {
 	return 0;
 }
 
+double genRand() {
+	return rand()*(1.0/INT_MAX);
+}
+
+char Predictor::getState(double * P) {
+	int j;
+	double r = rand();
+	for (j=0; r>(*P) && j<numStates-1; j++) P++;
+	return (states[j]);
+}
+
 void Predictor::mutateSequence(char * currentSequence,
-		char * ancestralSequence) {
+		char * ancestralSequence, double branchLength) {
+
+//	int cat;
+//	double * Q;
+//	short * R;
+//	short * S;
+//	char * P = currentSequence;
+
+//    for (int i=0; i<numRateCategories; i++) {
+//            SetMatrix(matrix[i], catRate[i]*branchLength);
+//    }
+//    R = categories + inFromSite;
+//            for (int i=0; i<length; i++) {
+//                    *P=SetState(matrix[*R]+((*P) * numStates));
+//                    P++;
+//                    R++;
+//            }
 
 	cout << "   Simulating sequence..." << endl;
 	strcpy(currentSequence, ancestralSequence);
@@ -116,8 +156,9 @@ void Predictor::evolveNode(nodeptr node, char * ancestralSequence) {
 		cout << "INFO: Ancestral: " << ancestralSequence << endl;
 #endif
 
+	double branchLength = pllGetBranchLength(tree, node, partitionNumber);
 	char * currentSequence = (char *) malloc(strlen(ancestralSequence) + 1);
-	mutateSequence(currentSequence, ancestralSequence);
+	mutateSequence(currentSequence, ancestralSequence, branchLength);
 
 	if (node->number > tree->mxtips) {
 		cout << "   Recurse for Mutating node " << node->next->back->number
