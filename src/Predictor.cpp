@@ -6,10 +6,12 @@
  */
 
 #include "Predictor.h"
+#include "Utils.h"
+
 #include <iostream>
 #include <algorithm>
 #include <cstring>
-#include <limits.h>
+#include <cassert>
 
 #define PRINT_ANCESTRAL 1
 
@@ -24,7 +26,7 @@ Predictor::Predictor(pllInstance * tree, partitionList * partitions,
 	/* get information from the partition */
 	start = partitions->partitionData[partitionNumber]->lower;
 	end = partitions->partitionData[partitionNumber]->upper;
-	length = end - start + 1;
+	length = end - start;
 	numStates = partitions->partitionData[partitionNumber]->states;
 
 	/* number of gamma rate categories fixed to 4 */
@@ -40,10 +42,10 @@ Predictor::Predictor(pllInstance * tree, partitionList * partitions,
 		exit(1);
 	}
 	states.resize(numStates);
-	states[0] = 1; //A
-	states[1] = 2; //C
-	states[2] = 4; //G
-	states[3] = 8; //T
+	states[0] = (char) 1; //1; //A
+	states[1] = (char) 2; //2; //C
+	states[2] = (char) 3; //4; //G
+	states[3] = (char) 4; //8; //T
 }
 
 Predictor::~Predictor() {
@@ -114,13 +116,9 @@ nodeptr Predictor::findMissingDataAncestor() {
 	return 0;
 }
 
-double genRand() {
-	return rand()*(1.0/INT_MAX);
-}
-
 char Predictor::getState(double * P) {
 	int j;
-	double r = rand();
+	double r = Utils::genRand();
 	for (j=0; r>(*P) && j<numStates-1; j++) P++;
 	return (states[j]);
 }
@@ -128,32 +126,53 @@ char Predictor::getState(double * P) {
 void Predictor::mutateSequence(char * currentSequence,
 		char * ancestralSequence, double branchLength) {
 
-//	int cat;
-//	double * Q;
-//	short * R;
-//	short * S;
-//	char * P = currentSequence;
-
-//    for (int i=0; i<numRateCategories; i++) {
-//            SetMatrix(matrix[i], catRate[i]*branchLength);
-//    }
-//    R = categories + inFromSite;
-//            for (int i=0; i<length; i++) {
-//                    *P=SetState(matrix[*R]+((*P) * numStates));
-//                    P++;
-//                    R++;
-//            }
+	if ( length != strlen(ancestralSequence) ) {
+		cerr << "ERROR: Length of ancestral sequence (" << strlen(ancestralSequence)
+				<< ") differ from the expected length (" << length << ")" << endl;
+		assert(0);
+	}
 
 	cout << "   Simulating sequence..." << endl;
+
+	/* start mutating the ancestral sequence */
 	strcpy(currentSequence, ancestralSequence);
+
+	double gammaRates[numRateCategories];
+	pllMakeGammaCats(partitions->partitionData[partitionNumber]->alpha,gammaRates, numRateCategories, false);
+	cout << "INFO: GAMMA RATES "; Utils::printVector(gammaRates, numRateCategories);
+	Utils::printVector(partitions->partitionData[0]->gammaRates, 4);
+	/* random assignment of sites to categories */
+	short categories[length];
+	for (unsigned int i=0; i<length; i++) {
+		categories[i]=(int)(numRateCategories * Utils::genRand());
+	}
+
+//	int cat;
+//	double * Q;
+	short * R = categories;
+//	short * S;
+	char * P = currentSequence;
+
+//	for (int i = 0; i < numRateCategories; i++) {
+//		SetMatrix(matrix[i], catRate[i] * branchLength);
+//	}
+	for (int i = 0; i < length; i++) {
+		*P = getState(&gammaRates[*R] + ((*P) * numStates));
+		P++;
+		R++;
+	}
+
+
 }
 
 void Predictor::evolveNode(nodeptr node, char * ancestralSequence) {
 
 	cout << "INFO: Mutating node " << node->number << endl;
 #ifdef PRINT_ANCESTRAL
-	if (ancestralSequence)
-		cout << "INFO: Ancestral: " << ancestralSequence << endl;
+	if (ancestralSequence) {
+		cout << "INFO: Ancestral: ";
+	    Utils::printSequence(ancestralSequence);
+	}
 #endif
 
 	double branchLength = pllGetBranchLength(tree, node, partitionNumber);
@@ -167,7 +186,7 @@ void Predictor::evolveNode(nodeptr node, char * ancestralSequence) {
 		evolveNode(node->next->next->back, currentSequence);
 	} else {
 		cout << "Finished sequence for taxon " << node->number << endl;
-		cout << currentSequence << endl;
+		Utils::printSequence(currentSequence);
 	}
 	free(currentSequence);
 }
@@ -188,10 +207,34 @@ void Predictor::predictMissingSequences() {
 	cout << "Updating partials for " << startNode->number << endl;
 	pllUpdatePartialsAncestral(tree, partitions, startNode);
 	cout << "Generating ancestral for " << startNode->number << endl;
+
 	char * ancestral = (char *) malloc(length + 1);
 	double * probs = (double *) malloc(
 			length * numStates * sizeof(double));
 	pllGetAncestralState(tree, partitions, startNode, probs, ancestral);
+	for(int i=0; i<length; i++) {
+		switch (ancestral[i]) {
+		case 'A':
+		case 'a':
+			ancestral[i] = states[0];
+			break;
+		case 'C':
+		case 'c':
+			ancestral[i] = states[1];
+			break;
+		case 'G':
+		case 'g':
+			ancestral[i] = states[2];
+			break;
+		case 'T':
+		case 't':
+			ancestral[i] = states[3];
+			break;
+		default:
+			assert(0);
+		}
+	}
+	cout << "STARTING SEQ: "; Utils::printSequence(ancestral);
 	free (probs);
 
 	evolveNode(ancestor->back, ancestral);

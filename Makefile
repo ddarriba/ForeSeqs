@@ -3,7 +3,7 @@ CFLAGS=-g -Ilibpll/include -O4 -Wall
 LDFLAGS=-g -Llibpll/lib -O4 -Wall
 LIBS=-lpll-sse3 -lm
 
-SOURCES=src/SeqPred.cpp src/Predictor.cpp src/Model.cpp
+SOURCES=src/SeqPred.cpp src/Predictor.cpp src/Model.cpp src/Utils.cpp
 OBJECTS=$(SOURCES:.cpp=.o)
 EXECUTABLE=seqpred
 
