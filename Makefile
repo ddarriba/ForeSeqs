@@ -15,5 +15,8 @@ $(EXECUTABLE): $(OBJECTS)
 .cpp.o:
 	$(CC) -c $(CFLAGS) $< -o $@
 
+clean:
+	rm -f src/*.o $(EXECUTABLE)
+
 oneline:
 	g++ -g -O2 -Ilibpll/include -Llibpll/lib -o seqpred src/SeqPred.cpp src/Predictor.cpp -lpll-sse3 -lm
