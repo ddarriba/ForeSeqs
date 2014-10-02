@@ -7,6 +7,7 @@
 
 #include "Predictor.h"
 #include "Utils.h"
+#include "Model.h"
 
 #include <iostream>
 #include <algorithm>
@@ -42,10 +43,18 @@ Predictor::Predictor(pllInstance * tree, partitionList * partitions,
 		exit(1);
 	}
 	states.resize(numStates);
-	states[0] = (char) 1; //1; //A
-	states[1] = (char) 2; //2; //C
-	states[2] = (char) 3; //4; //G
-	states[3] = (char) 4; //8; //T
+	states[0] = 'A'; //1; //A
+	states[1] = 'C'; //2; //C
+	states[2] = 'G'; //4; //G
+	states[3] = 'T'; //8; //T
+	statesMap['a'] = 0;
+	statesMap['A'] = 0;
+	statesMap['c'] = 1;
+	statesMap['C'] = 1;
+	statesMap['g'] = 2;
+	statesMap['G'] = 2;
+	statesMap['t'] = 3;
+	statesMap['T'] = 3;
 }
 
 Predictor::~Predictor() {
@@ -139,25 +148,26 @@ void Predictor::mutateSequence(char * currentSequence,
 
 	double gammaRates[numRateCategories];
 	pllMakeGammaCats(partitions->partitionData[partitionNumber]->alpha,gammaRates, numRateCategories, false);
-	cout << "INFO: GAMMA RATES "; Utils::printVector(gammaRates, numRateCategories);
-	Utils::printVector(partitions->partitionData[0]->gammaRates, 4);
+
 	/* random assignment of sites to categories */
 	short categories[length];
 	for (unsigned int i=0; i<length; i++) {
 		categories[i]=(int)(numRateCategories * Utils::genRand());
 	}
 
-//	int cat;
-//	double * Q;
 	short * R = categories;
-//	short * S;
 	char * P = currentSequence;
 
-//	for (int i = 0; i < numRateCategories; i++) {
-//		SetMatrix(matrix[i], catRate[i] * branchLength);
-//	}
-	for (int i = 0; i < length; i++) {
-		*P = getState(&gammaRates[*R] + ((*P) * numStates));
+	double *matrix[4];
+	for (int i=0; i<4; i++) {
+		matrix[i] = (double*)malloc(16 * sizeof(double));
+	}
+	Model curModel(partitions, partitionNumber);
+	for (int i = 0; i < numRateCategories; i++) {
+		curModel.setMatrix(matrix[i], gammaRates[i] * branchLength);
+	}
+	for (unsigned int i = 0; i < length; i++) {
+		*P = getState(matrix[*R]+((statesMap[*P]) * numStates));
 		P++;
 		R++;
 	}
@@ -200,10 +210,7 @@ void Predictor::predictMissingSequences() {
 	nodeptr ancestor = findMissingDataAncestor();
 
 	nodeptr startNode = ancestor; //tree->nodep[5]->back->next->next->back;
-	pllEvaluateLikelihood(tree, partitions, tree->start, true, false);
-	pllTreeToNewick(tree->tree_string, tree, partitions, tree->start->back,
-			true, true, false, false, false, PLL_SUMMARIZE_LH, false, false);
-	cout << "Tree: " << tree->tree_string << endl;
+
 	cout << "Updating partials for " << startNode->number << endl;
 	pllUpdatePartialsAncestral(tree, partitions, startNode);
 	cout << "Generating ancestral for " << startNode->number << endl;
@@ -212,28 +219,28 @@ void Predictor::predictMissingSequences() {
 	double * probs = (double *) malloc(
 			length * numStates * sizeof(double));
 	pllGetAncestralState(tree, partitions, startNode, probs, ancestral);
-	for(int i=0; i<length; i++) {
-		switch (ancestral[i]) {
-		case 'A':
-		case 'a':
-			ancestral[i] = states[0];
-			break;
-		case 'C':
-		case 'c':
-			ancestral[i] = states[1];
-			break;
-		case 'G':
-		case 'g':
-			ancestral[i] = states[2];
-			break;
-		case 'T':
-		case 't':
-			ancestral[i] = states[3];
-			break;
-		default:
-			assert(0);
-		}
-	}
+//	for(unsigned int i=0; i<length; i++) {
+//		switch (ancestral[i]) {
+//		case 'A':
+//		case 'a':
+//			ancestral[i] = states[0];
+//			break;
+//		case 'C':
+//		case 'c':
+//			ancestral[i] = states[1];
+//			break;
+//		case 'G':
+//		case 'g':
+//			ancestral[i] = states[2];
+//			break;
+//		case 'T':
+//		case 't':
+//			ancestral[i] = states[3];
+//			break;
+//		default:
+//			assert(0);
+//		}
+//	}
 	cout << "STARTING SEQ: "; Utils::printSequence(ancestral);
 	free (probs);
 

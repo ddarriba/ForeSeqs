@@ -9,6 +9,33 @@
 
 using namespace std;
 
+void optimizeModelParameters(pllInstance * pllTree,
+		partitionList * pllPartitions) {
+	pllOptRatesGeneric(pllTree, pllPartitions, 1.0, pllPartitions->rateList);
+	pllEvaluateLikelihood(pllTree, pllPartitions, pllTree->start, true, false);
+	pllOptBaseFreqs(pllTree, pllPartitions, 1.0, pllPartitions->freqList);
+	pllEvaluateLikelihood(pllTree, pllPartitions, pllTree->start, true, false);
+	pllOptAlphasGeneric(pllTree, pllPartitions, 1.0, pllPartitions->alphaList);
+	pllEvaluateLikelihood(pllTree, pllPartitions, pllTree->start, true, false);
+	double lk = 0.0;
+	do {
+		lk = pllTree->likelihood;
+		pllEvaluateLikelihood(pllTree, pllPartitions, pllTree->start, true,
+				false);
+		pllOptRatesGeneric(pllTree, pllPartitions, 0.1,
+				pllPartitions->rateList);
+		pllEvaluateLikelihood(pllTree, pllPartitions, pllTree->start, true,
+				false);
+		pllOptBaseFreqs(pllTree, pllPartitions, 0.1, pllPartitions->freqList);
+		pllEvaluateLikelihood(pllTree, pllPartitions, pllTree->start, true,
+				false);
+		pllOptAlphasGeneric(pllTree, pllPartitions, 0.1,
+				pllPartitions->alphaList);
+		pllEvaluateLikelihood(pllTree, pllPartitions, pllTree->start, true,
+				false);
+	} while (fabs(lk - pllTree->likelihood) > 0.01);
+}
+
 int main(int argc, char * argv[]) {
 
 	pllQueue * pllPartsQueue = 0;
@@ -81,8 +108,22 @@ int main(int argc, char * argv[]) {
 //		cout << pllTree->nodep[i]->z[0] << " " << bl << endl;
 //	}
 	pllEvaluateLikelihood(pllTree, pllPartitions, pllTree->start, true, false);
+	pllTreeToNewick(pllTree->tree_string, pllTree, pllPartitions,
+			pllTree->start->back, true, true, false, false, false,
+			PLL_SUMMARIZE_LH, false, false);
+	cout << "Tree: " << pllTree->tree_string << endl;
+
+	pllEvaluateLikelihood(pllTree, pllPartitions, pllTree->start, true, false);
 	cout << "TRACE: Initial log likelihood: " << pllTree->likelihood << endl;
-	pllOptimizeModelParameters(pllTree, pllPartitions, 0.1);
+
+	optimizeModelParameters(pllTree, pllPartitions);
+//	pllOptimizeModelParameters(pllTree, pllPartitions, 0.1);
+
+	pllEvaluateLikelihood(pllTree, pllPartitions, pllTree->start, true, false);
+	pllTreeToNewick(pllTree->tree_string, pllTree, pllPartitions,
+			pllTree->start->back, true, true, false, false, false,
+			PLL_SUMMARIZE_LH, false, false);
+	cout << "Tree: " << pllTree->tree_string << endl;
 
 	seqpred::Predictor sequencePredictor(pllTree, pllPartitions, 0);
 	sequencePredictor.predictMissingSequences();

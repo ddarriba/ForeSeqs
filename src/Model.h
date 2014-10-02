@@ -11,7 +11,7 @@
 #include <vector>
 #include "pll.h"
 
-namespace seqgen {
+namespace seqpred {
 
 class Model {
 public:
@@ -19,11 +19,13 @@ public:
 	void setMatrix(double * matrix, double branchLength);
 	virtual ~Model();
 private:
+	void SetupGTR();
+
 	pInfo * partitionInfo;
 	std::vector<double> frequencies;
 	std::vector<double> substRates;
 };
 
-} /* namespace seqgen */
+} /* namespace seqpred */
 
 #endif /* MODEL_H_ */

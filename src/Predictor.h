@@ -9,6 +9,7 @@
 #define PREDICTOR_H_
 
 #include "pll.h"
+#include <map>
 #include <vector>
 
 #define PLL_UNDEFINED_SITE 15
@@ -77,6 +78,7 @@ private:
 	std::vector<int> missingSequences;	/** Vector of taxa with missing sequences */
 
 	std::vector<char> states;			/** Vector of the different states */
+	std::map<char, int> statesMap;		/** Vector of the states index according to char */
 };
 
 } /* namespace seqpred */
