@@ -56,6 +56,9 @@ extern int numberOfStates;
 extern std::vector<char> states;			/** Vector of the different states */
 extern std::map<char, int> statesMap;		/** Map of the states index according to char */
 
+extern int numberOfTaxa, sequenceLength;
+extern char ** taxaNames;
+
 extern bool initialized;
 
 } /* namespace seqpred */

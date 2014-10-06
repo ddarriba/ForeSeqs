@@ -25,6 +25,9 @@ std::vector<char> states;
 std::map<char, int> statesMap;
 bool initialized = false;
 
+int numberOfTaxa, sequenceLength;
+char ** taxaNames;
+
 void Utils::init() {
 	switch (dataType) {
 	case DT_NUCLEIC:
@@ -233,7 +236,7 @@ int Utils::eigen(int job, double A[], int n, double rr[], double ri[],
 			istate = 1;
 	}
 
-	//A*[vr+vi*i] = [vr+vi*i] * diag{rr+ri*i}
+#ifdef DEBUG_EIGEN
 	cout << "VR :";
 	printVector(vr, 16);
 	cout << "VI :";
@@ -242,6 +245,7 @@ int Utils::eigen(int job, double A[], int n, double rr[], double ri[],
 	printVector(rr, 4);
 	cout << "RI :";
 	printVector(ri, 4);
+#endif
 
 	return (istate);
 }
