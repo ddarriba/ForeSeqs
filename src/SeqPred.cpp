@@ -41,6 +41,7 @@ void optimizeModelParameters(pllInstance * pllTree,
 int main(int argc, char * argv[]) {
 
 	int numberOfTaxa, sequenceLength;
+	bool partitionsFileDefined = false;
 
 	pllQueue * pllPartsQueue = 0;
 	pllInstance * pllTree = 0;
@@ -54,9 +55,12 @@ int main(int argc, char * argv[]) {
 	} else {
 		if (argc != 4) {
 			cerr << "Usage: " << argv[0] << " seqFile treeFile partitionsFile";
+			exit(EX_IOERR);
+		} else {
 			inputfile = argv[1];
 			treefile = argv[2];
 			partitionsfile = argv[3];
+			partitionsFileDefined = true;
 		}
 	}
 
@@ -71,10 +75,28 @@ int main(int argc, char * argv[]) {
 		pllTree = pllCreateInstance(&pllInstanceAttr);
 	}
 
+	if (!seqpred::Utils::existsFile(inputfile)) {
+		cerr << "[ERROR] Input alignment (" << inputfile << ") does not exist."
+				<< endl;
+		exit(EX_IOERR);
+	}
+
+	if (!seqpred::Utils::existsFile(treefile)) {
+		cerr << "[ERROR] Tree file (" << treefile << ") does not exist."
+				<< endl;
+		exit(EX_IOERR);
+	}
+
+	if (partitionsFileDefined && !seqpred::Utils::existsFile(treefile)) {
+		cerr << "[ERROR] Partitions file (" << partitionsfile
+				<< ") does not exist." << endl;
+		exit(EX_IOERR);
+	}
+
 	pllPhylip = pllParseAlignmentFile(PLL_FORMAT_PHYLIP, inputfile.c_str());
 	if (!pllPhylip) {
 		cerr << "[ERROR] There was an error parsing input data." << endl;
-		exit(1);
+		exit(EX_IOERR);
 	}
 	numberOfTaxa = pllPhylip->sequenceCount;
 	sequenceLength = pllPhylip->sequenceLength;
@@ -88,7 +110,7 @@ int main(int argc, char * argv[]) {
 
 	if (!pllPartitions) {
 		cerr << "[ERROR] There was an error parsing partitions data." << endl;
-		exit(1);
+		exit(EX_IOERR);
 	}
 
 #ifdef PRINT_TRACE
@@ -119,7 +141,7 @@ int main(int argc, char * argv[]) {
 	{
 		cerr << "Invalid phylogenetic tree" << endl;
 		printf("%d\n", errno);
-		return (EXIT_FAILURE);
+		return (EX_IOERR);
 	}
 
 	pllTreeInitTopologyNewick(pllTree, nt, PLL_FALSE);
@@ -172,5 +194,7 @@ int main(int argc, char * argv[]) {
 
 	pllPartitionsDestroy(pllTree, &pllPartitions);
 	pllDestroyInstance(pllTree);
+
+	return(EX_OK);
 }
 

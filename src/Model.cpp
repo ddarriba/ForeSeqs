@@ -101,13 +101,13 @@ void Model::SetupGTR() {
 
 void Model::setMatrix(double * matrix, double branchLength) {
 	int i, j, k;
-	double expt[4];
+	double expt[numberOfStates];
 	double *P;
 
 	P = matrix;
 	if (branchLength < 1e-6) {
-		for (i = 0; i < 4; i++) {
-			for (j = 0; j < 4; j++) {
+		for (i = 0; i < numberOfStates; i++) {
+			for (j = 0; j < numberOfStates; j++) {
 				if (i == j)
 					*P = 1.0;
 				else
@@ -118,14 +118,14 @@ void Model::setMatrix(double * matrix, double branchLength) {
 		return;
 	}
 
-	for (k = 1; k < 4; k++) {
+	for (k = 1; k < numberOfStates; k++) {
 		expt[k] = exp(branchLength * Root[k]);
 	}
-	for (i = 0; i < 4; i++) {
-		for (j = 0; j < 4; j++) {
-			(*P) = Cijk[i * 4 * 4 + j * 4 + 0];
-			for (k = 1; k < 4; k++) {
-				(*P) += Cijk[i * 4 * 4 + j * 4 + k] * expt[k];
+	for (i = 0; i < numberOfStates; i++) {
+		for (j = 0; j < numberOfStates; j++) {
+			(*P) = Cijk[i * numberOfStates * numberOfStates + j * numberOfStates + 0];
+			for (k = 1; k < numberOfStates; k++) {
+				(*P) += Cijk[i * numberOfStates * numberOfStates + j * numberOfStates + k] * expt[k];
 			}
 			P++;
 		}
@@ -133,12 +133,12 @@ void Model::setMatrix(double * matrix, double branchLength) {
 
 	/* the rows are cumulative to help with picking one using
 	 a random number */
-	for (int i = 0; i < 4; i++) {
-		for (int j = 1; j < 4; j++) {
-			int nextIndex = 4 * i + j;
+	for (int i = 0; i < numberOfStates; i++) {
+		for (int j = 1; j < numberOfStates; j++) {
+			int nextIndex = numberOfStates * i + j;
 			matrix[nextIndex] += matrix[nextIndex - 1];
 		}
-		assert(Utils::floatEquals(matrix[4 * (i + 1) - 1], 1.0));
+		assert(Utils::floatEquals(matrix[numberOfStates * (i + 1) - 1], 1.0));
 	}
 
 }

@@ -9,7 +9,6 @@
 
 #include <climits>
 #include <cstdlib>
-#include <iostream>
 #include <cstring>
 #include <cmath>
 
@@ -19,24 +18,32 @@ using namespace std;
 
 namespace seqpred {
 
-std::vector<char> states(4);
+DataType dataType = DT_NUCLEIC;
+
+int numberOfStates;
+std::vector<char> states;
 std::map<char, int> statesMap;
 bool initialized = false;
 
 void Utils::init() {
-	states.resize(15);
-	states[1] = 'A'; //1; //A
-	states[2] = 'C'; //2; //C
-	states[4] = 'G'; //4; //G
-	states[8] = 'T'; //8; //T
-	statesMap['a'] = 0;
-	statesMap['A'] = 0;
-	statesMap['c'] = 1;
-	statesMap['C'] = 1;
-	statesMap['g'] = 2;
-	statesMap['G'] = 2;
-	statesMap['t'] = 3;
-	statesMap['T'] = 3;
+	switch (dataType) {
+	case DT_NUCLEIC:
+		numberOfStates = 4;
+		states.resize(16);
+		states[1] = 'A'; //1; //A
+		states[2] = 'C'; //2; //C
+		states[4] = 'G'; //4; //G
+		states[8] = 'T'; //8; //T
+		statesMap['a'] = statesMap['A'] = 0;
+		statesMap['c'] = statesMap['C'] = 1;
+		statesMap['g'] = statesMap['G'] = 2;
+		statesMap['t'] = statesMap['T'] = 3;
+		break;
+	case DT_PROTEIC:
+	default:
+		cerr << "ERROR: Unimplemented data type" << endl;
+		exit(EX_UNIMPLEMENTED);
+	}
 	initialized = true;
 }
 
@@ -45,14 +52,8 @@ double Utils::genRand(void) {
 }
 
 void Utils::printSequence(const char * sequence) {
-	if (sequence[0] > 20) {
-		for (unsigned int i = 0; i < strlen(sequence); i++) {
-			cout << sequence[i];
-		}
-	} else {
-		for (unsigned int i = 0; i < strlen(sequence); i++) {
-			cout << (int) sequence[i];
-		}
+	for (unsigned int i = 0; i < strlen(sequence); i++) {
+		cout << sequence[i];
 	}
 	cout << endl;
 }

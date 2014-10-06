@@ -9,12 +9,34 @@
 #define UTILS_H_
 
 #include <vector>
+#include <iostream>
+#include <cstdio>
 #include <map>
+
+#define EX_OK EXIT_SUCCESS
+#define EX_UNIMPLEMENTED 1
+#define EX_IOERR 2
 
 namespace seqpred {
 
 class Utils {
 public:
+	/**
+	 * @brief Check the existence of a file
+	 *
+	 * @param filename The file to check
+	 *
+	 * @return true, if the file exists
+	 */
+	static inline bool existsFile(const std::string& filename) {
+		if (FILE *file = fopen(filename.c_str(), "r")) {
+			fclose(file);
+			return true;
+		} else {
+			return false;
+		}
+	}
+
 	static double genRand(void);
 	static void printSequence(const char * seq);
 	static void printSequence(const unsigned char * seq, int length);
@@ -28,9 +50,13 @@ public:
 	static void init( void );
 };
 
-extern bool initialized;
+enum DataType { DT_NUCLEIC, DT_PROTEIC};
+extern DataType dataType;
+extern int numberOfStates;
 extern std::vector<char> states;			/** Vector of the different states */
 extern std::map<char, int> statesMap;		/** Map of the states index according to char */
+
+extern bool initialized;
 
 } /* namespace seqpred */
 
