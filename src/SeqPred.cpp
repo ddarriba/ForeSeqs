@@ -270,7 +270,7 @@ int main(int argc, char * argv[]) {
 	cout << "TRACE: Tree=" << pllTree->tree_string << endl;
 #endif
 
-	cout << << "Predicting sequences..." << endl << endl;
+	cout << "Predicting sequences..." << endl << endl;
 	seqpred::Utils::init();
 	for (int currentPartition = 0;
 			currentPartition < pllPartitions->numberOfPartitions;
