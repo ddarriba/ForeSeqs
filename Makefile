@@ -3,6 +3,7 @@ CFLAGS=-g -Ilibpll/include -O4 -Wall
 LDFLAGS=-g -Llibpll/lib -O4 -Wall
 LIBS=-lpll-sse3 -lm
 
+DBGFLAGS= # -DPRINT_ANCESTRAL -DPRINT_TRACE
 SOURCES=src/SeqPred.cpp src/Predictor.cpp src/Model.cpp src/Utils.cpp
 OBJECTS=$(SOURCES:.cpp=.o)
 EXECUTABLE=seqpred
@@ -13,7 +14,7 @@ $(EXECUTABLE): $(OBJECTS)
 	$(CC) $(LDFLAGS) $(OBJECTS) -o $@ $(LIBS)
 
 .cpp.o:
-	$(CC) -c $(CFLAGS) $< -o $@
+	$(CC) $(DBGFLAGS) -c $(CFLAGS) $< -o $@
 
 clean:
 	rm -f src/*.o $(EXECUTABLE)

@@ -19,6 +19,27 @@ using namespace std;
 
 namespace seqpred {
 
+std::vector<char> states(4);
+std::map<char, int> statesMap;
+bool initialized = false;
+
+void Utils::init() {
+	states.resize(15);
+	states[1] = 'A'; //1; //A
+	states[2] = 'C'; //2; //C
+	states[4] = 'G'; //4; //G
+	states[8] = 'T'; //8; //T
+	statesMap['a'] = 0;
+	statesMap['A'] = 0;
+	statesMap['c'] = 1;
+	statesMap['C'] = 1;
+	statesMap['g'] = 2;
+	statesMap['G'] = 2;
+	statesMap['t'] = 3;
+	statesMap['T'] = 3;
+	initialized = true;
+}
+
 double Utils::genRand(void) {
 	return rand() * (1.0 / INT_MAX);
 }
@@ -32,6 +53,13 @@ void Utils::printSequence(const char * sequence) {
 		for (unsigned int i = 0; i < strlen(sequence); i++) {
 			cout << (int) sequence[i];
 		}
+	}
+	cout << endl;
+}
+
+void Utils::printSequence(const unsigned char * sequence, int length) {
+	for (int i = 0; i < length; i++) {
+		cout << states[(int)sequence[i]];
 	}
 	cout << endl;
 }
@@ -204,13 +232,15 @@ int Utils::eigen(int job, double A[], int n, double rr[], double ri[],
 			istate = 1;
 	}
 
-
 	//A*[vr+vi*i] = [vr+vi*i] * diag{rr+ri*i}
-	cout << "VR :"; printVector(vr, 16);
-	cout << "VI :"; printVector(vi, 16);
-	cout << "RR :"; printVector(rr, 4);
-	cout << "RI :"; printVector(ri, 4);
-
+	cout << "VR :";
+	printVector(vr, 16);
+	cout << "VI :";
+	printVector(vi, 16);
+	cout << "RR :";
+	printVector(rr, 4);
+	cout << "RI :";
+	printVector(ri, 4);
 
 	return (istate);
 }

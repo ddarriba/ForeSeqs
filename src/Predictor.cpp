@@ -7,14 +7,12 @@
 
 #include "Predictor.h"
 #include "Utils.h"
-#include "Model.h"
 
 #include <iostream>
 #include <algorithm>
 #include <cstring>
 #include <cassert>
-
-#define PRINT_ANCESTRAL 1
+#include <cmath>
 
 using namespace std;
 
@@ -22,7 +20,8 @@ namespace seqpred {
 
 Predictor::Predictor(pllInstance * tree, partitionList * partitions,
 		int partitionNumber) :
-		tree(tree), partitions(partitions), partitionNumber(partitionNumber) {
+		tree(tree), partitions(partitions), partitionNumber(partitionNumber),
+		curModel(partitions, partitionNumber) {
 
 	/* get information from the partition */
 	start = partitions->partitionData[partitionNumber]->lower;
@@ -42,23 +41,12 @@ Predictor::Predictor(pllInstance * tree, partitionList * partitions,
 		cerr << " Not implemented yet for " << numStates << " states" << endl;
 		exit(1);
 	}
-	states.resize(numStates);
-	states[0] = 'A'; //1; //A
-	states[1] = 'C'; //2; //C
-	states[2] = 'G'; //4; //G
-	states[3] = 'T'; //8; //T
-	statesMap['a'] = 0;
-	statesMap['A'] = 0;
-	statesMap['c'] = 1;
-	statesMap['C'] = 1;
-	statesMap['g'] = 2;
-	statesMap['G'] = 2;
-	statesMap['t'] = 3;
-	statesMap['T'] = 3;
 }
 
 Predictor::~Predictor() {
-	/* nothing to do */
+	for (size_t i = 0; i < missingSequences.size(); i++) {
+		free(predictedSequences[missingSequences[i]]);
+	}
 }
 
 vector<int> Predictor::findMissingSequences() {
@@ -111,7 +99,9 @@ nodeptr Predictor::findMissingDataAncestor() {
 			cerr << "ERROR: Everything is missing!!" << endl;
 			return 0;
 		} else if (!(missingRight || missingLeft)) {
-			cout << "INFO: Found ancestor in " << currentNode->number << endl;
+#ifdef PRINT_TRACE
+			cout << "TRACE: Found ancestor in " << currentNode->number << endl;
+#endif
 			return currentNode;
 		} else {
 			/* move to next position */
@@ -119,7 +109,9 @@ nodeptr Predictor::findMissingDataAncestor() {
 					(!missingRight) ?
 							currentNode->next->back :
 							currentNode->next->next->back;
-			cout << "INFO: Moving node to " << currentNode->number << endl;
+#ifdef PRINT_TRACE
+			cout << "TRACE: Moving node to " << currentNode->number << endl;
+#endif
 		}
 	}
 	return 0;
@@ -129,7 +121,7 @@ char Predictor::getState(double * P) {
 	int j;
 	double r = Utils::genRand();
 	for (j=0; r>(*P) && j<numStates-1; j++) P++;
-	return (states[j]);
+	return (states[pow(2,j)]);
 }
 
 void Predictor::mutateSequence(char * currentSequence,
@@ -141,7 +133,9 @@ void Predictor::mutateSequence(char * currentSequence,
 		assert(0);
 	}
 
-	cout << "   Simulating sequence..." << endl;
+#ifdef PRINT_TRACE
+	cout << "TRACE: Simulating sequence..." << endl;
+#endif
 
 	/* start mutating the ancestral sequence */
 	strcpy(currentSequence, ancestralSequence);
@@ -162,7 +156,6 @@ void Predictor::mutateSequence(char * currentSequence,
 	for (int i=0; i<4; i++) {
 		matrix[i] = (double*)malloc(16 * sizeof(double));
 	}
-	Model curModel(partitions, partitionNumber);
 	for (int i = 0; i < numRateCategories; i++) {
 		curModel.setMatrix(matrix[i], gammaRates[i] * branchLength);
 	}
@@ -171,13 +164,17 @@ void Predictor::mutateSequence(char * currentSequence,
 		P++;
 		R++;
 	}
-
+	for (int i = 0; i < 4; i++) {
+		free(matrix[i]);
+	}
 
 }
 
 void Predictor::evolveNode(nodeptr node, char * ancestralSequence) {
 
-	cout << "INFO: Mutating node " << node->number << endl;
+#ifdef PRINT_TRACE
+	cout << "TRACE: Mutating node " << node->number << endl;
+#endif
 #ifdef PRINT_ANCESTRAL
 	if (ancestralSequence) {
 		cout << "INFO: Ancestral: ";
@@ -190,63 +187,47 @@ void Predictor::evolveNode(nodeptr node, char * ancestralSequence) {
 	mutateSequence(currentSequence, ancestralSequence, branchLength);
 
 	if (node->number > tree->mxtips) {
-		cout << "   Recurse for Mutating node " << node->next->back->number
+#ifdef PRINT_TRACE
+		cout << "TRACE: Recurse for Mutating node " << node->next->back->number
 				<< " and " << node->next->next->back->number << endl;
+#endif
 		evolveNode(node->next->back, currentSequence);
 		evolveNode(node->next->next->back, currentSequence);
+		free(currentSequence);
 	} else {
-		cout << "Finished sequence for taxon " << node->number << endl;
-		Utils::printSequence(currentSequence);
+		predictedSequences[node->number] = currentSequence;
 	}
-	free(currentSequence);
 }
 
 void Predictor::predictMissingSequences() {
 
+#ifdef PRINT_TRACE
 	for (size_t i = 0; i < missingSequences.size(); i++) {
-		cout << "Missing sequence " << missingSequences[i] << endl;
+		cout << "TRACE: Missing sequence " << missingSequences[i] << endl;
 	}
+#endif
 
 	nodeptr ancestor = findMissingDataAncestor();
 
 	nodeptr startNode = ancestor; //tree->nodep[5]->back->next->next->back;
 
-	cout << "Updating partials for " << startNode->number << endl;
+#ifdef PRINT_TRACE
+	cout << "TRACE: Updating partials for " << startNode->number << endl;
+#endif
 	pllUpdatePartialsAncestral(tree, partitions, startNode);
-	cout << "Generating ancestral for " << startNode->number << endl;
+#ifdef PRINT_TRACE
+	cout << "TRACE: Generating ancestral for " << startNode->number << endl;
+#endif
 
 	char * ancestral = (char *) malloc(length + 1);
 	double * probs = (double *) malloc(
 			length * numStates * sizeof(double));
 	pllGetAncestralState(tree, partitions, startNode, probs, ancestral);
-//	for(unsigned int i=0; i<length; i++) {
-//		switch (ancestral[i]) {
-//		case 'A':
-//		case 'a':
-//			ancestral[i] = states[0];
-//			break;
-//		case 'C':
-//		case 'c':
-//			ancestral[i] = states[1];
-//			break;
-//		case 'G':
-//		case 'g':
-//			ancestral[i] = states[2];
-//			break;
-//		case 'T':
-//		case 't':
-//			ancestral[i] = states[3];
-//			break;
-//		default:
-//			assert(0);
-//		}
-//	}
-	cout << "STARTING SEQ: "; Utils::printSequence(ancestral);
+
 	free (probs);
 
 	evolveNode(ancestor->back, ancestral);
 	free (ancestral);
-
 }
 
 } /* namespace seqpred */

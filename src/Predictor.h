@@ -9,6 +9,8 @@
 #define PREDICTOR_H_
 
 #include "pll.h"
+#include "Model.h"
+
 #include <map>
 #include <vector>
 
@@ -30,10 +32,24 @@ public:
 	void predictMissingSequences();
 
 	/**
+	 * @brief Get the number of taxa with missing sequences
+	 */
+	int getNumberOfMissingSequences(void) const {
+		return missingSequences.size();
+	}
+
+	/**
 	* @brief Get the taxa with missing sequences
 	*/
-	const std::vector<int> getMissingSequences() const {
+	const std::vector<int> getMissingSequences( void ) const {
 		return missingSequences;
+	}
+
+	/**
+	 * @brief Get the new state according to a cumulative probability vector P
+	 */
+	const std::map<int, char *> getPredictedSequences( void ) const {
+		return predictedSequences;
 	}
 private:
 	/**
@@ -76,9 +92,10 @@ private:
 	int numStates;						/** Number of states (DNA=4, AA=20) */
 	int numRateCategories;				/** Number of gamma rate categories */
 	std::vector<int> missingSequences;	/** Vector of taxa with missing sequences */
+	Model curModel;						/** Model for computing the P matrix */
 
-	std::vector<char> states;			/** Vector of the different states */
-	std::map<char, int> statesMap;		/** Vector of the states index according to char */
+	/** Map containing the final predicted sequences */
+	std::map<int, char*> predictedSequences;
 };
 
 } /* namespace seqpred */
