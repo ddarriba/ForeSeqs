@@ -10,9 +10,9 @@
 
 #include "Model.h"
 
-#define SQNUM_NUC 4*4
 #define NUM_NUC 4
-#define CUNUM_NUC 256
+#define SQNUM_NUC 4*4
+#define CUNUM_NUC 4*4*4
 
 namespace seqpred {
 

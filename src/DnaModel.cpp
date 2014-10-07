@@ -17,23 +17,14 @@ using namespace std;
 
 namespace seqpred {
 
-#define pos(i,j,n)      ((i)*(n)+(j))
-
-#define BASE        2    /* base of floating point arithmetic */
-#define DIGITS     53    /* no. of digits to the base BASE in the fraction */
-#define MAXITER    30    /* max. no. of iterations to converge */
-
-typedef struct {
-	double re, im;
-} complex;
-
-//static double Cijk[CUNUM_NUC], Root[NUM_NUC];
-
 DnaModel::DnaModel(partitionList * pllPartitions, int partitionIndex) :
 		Model(pllPartitions, partitionIndex) {
 
-	int numFreqs = partitionInfo->states;
-	int numRates = (partitionInfo->states - 1) * partitionInfo->states / 2;
+	assert (partitionInfo->states == NUM_NUC);
+	assert (numberOfStates == NUM_NUC);
+
+	int numFreqs = NUM_NUC;
+	int numRates = (NUM_NUC - 1) * NUM_NUC / 2;
 	frequencies.resize(numFreqs);
 	substRates.resize(numRates);
 	memcpy(&(frequencies[0]), partitionInfo->frequencies, numFreqs * sizeof(double));
@@ -42,29 +33,29 @@ DnaModel::DnaModel(partitionList * pllPartitions, int partitionIndex) :
 	SetupGTR();
 }
 
-double computeFracchange(double * freqs, double * substRates) {
+double computeFracchange(vector<double> freqs, vector<double> substRates) {
 	/* convert rates into matrix */
-	double r[4][4];
+	double r[NUM_NUC][NUM_NUC];
 	int i = 0;
-	for (int j = 0; j < 3; j++)
-		for (int k = j + 1; k < 4; k++)
+	for (int j = 0; j < (NUM_NUC-1); j++)
+		for (int k = j + 1; k < NUM_NUC; k++)
 			r[j][k] = substRates[i++];
-	for (int j = 0; j < 4; j++) {
+	for (int j = 0; j < NUM_NUC; j++) {
 		r[j][j] = 0.0;
 		for (int k = 0; k < j; k++)
 			r[j][k] = r[k][j];
 	}
 	/* evaluate fracchange */
 	double fracchange = 0.0;
-	for (int j = 0; j < 4; j++)
-		for (int k = 0; k < 4; k++)
+	for (int j = 0; j < NUM_NUC; j++)
+		for (int k = 0; k < NUM_NUC; k++)
 			fracchange += freqs[j] * r[j][k] * freqs[k];
 	return fracchange;
 }
 
 void DnaModel::SetupGTR() {
 
-	double fracchange = computeFracchange(partitionInfo->frequencies, partitionInfo->substRates);
+	double fracchange = computeFracchange(frequencies, substRates);
 	for (int i = 0; i < NUM_NUC; i++) {
 		Root[i] = -partitionInfo->EIGN[i] / fracchange;
 	}
@@ -82,13 +73,13 @@ void DnaModel::SetupGTR() {
 
 void DnaModel::setMatrix(double * matrix, double branchLength) const {
 	int i, j, k;
-	double expt[numberOfStates];
+	double expt[NUM_NUC];
 	double *P;
 
 	P = matrix;
 	if (branchLength < 1e-6) {
-		for (i = 0; i < numberOfStates; i++) {
-			for (j = 0; j < numberOfStates; j++) {
+		for (i = 0; i < NUM_NUC; i++) {
+			for (j = 0; j < NUM_NUC; j++) {
 				if (i == j)
 					*P = 1.0;
 				else
@@ -99,14 +90,14 @@ void DnaModel::setMatrix(double * matrix, double branchLength) const {
 		return;
 	}
 
-	for (k = 1; k < numberOfStates; k++) {
+	for (k = 1; k < NUM_NUC; k++) {
 		expt[k] = exp(branchLength * Root[k]);
 	}
-	for (i = 0; i < numberOfStates; i++) {
-		for (j = 0; j < numberOfStates; j++) {
-			(*P) = Cijk[i * numberOfStates * numberOfStates + j * numberOfStates + 0];
-			for (k = 1; k < numberOfStates; k++) {
-				(*P) += Cijk[i * numberOfStates * numberOfStates + j * numberOfStates + k] * expt[k];
+	for (i = 0; i < NUM_NUC; i++) {
+		for (j = 0; j < NUM_NUC; j++) {
+			(*P) = Cijk[i * SQNUM_NUC + j * NUM_NUC + 0];
+			for (k = 1; k < NUM_NUC; k++) {
+				(*P) += Cijk[i * SQNUM_NUC + j * NUM_NUC + k] * expt[k];
 			}
 			P++;
 		}
@@ -114,12 +105,12 @@ void DnaModel::setMatrix(double * matrix, double branchLength) const {
 
 	/* the rows are cumulative to help with picking one using
 	 a random number */
-	for (int i = 0; i < numberOfStates; i++) {
-		for (int j = 1; j < numberOfStates; j++) {
-			int nextIndex = numberOfStates * i + j;
+	for (int i = 0; i < NUM_NUC; i++) {
+		for (int j = 1; j < NUM_NUC; j++) {
+			int nextIndex = NUM_NUC * i + j;
 			matrix[nextIndex] += matrix[nextIndex - 1];
 		}
-		assert(Utils::floatEquals(matrix[numberOfStates * (i + 1) - 1], 1.0));
+		assert(Utils::floatEquals(matrix[NUM_NUC * (i + 1) - 1], 1.0));
 	}
 
 }
