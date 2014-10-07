@@ -10,6 +10,10 @@
 
 #include "Model.h"
 
+#define SQNUM_NUC 4*4
+#define NUM_NUC 4
+#define CUNUM_NUC 256
+
 namespace seqpred {
 
 class DnaModel: public Model {
@@ -19,6 +23,8 @@ public:
 	virtual ~DnaModel();
 private:
 	void SetupGTR();
+	double Cijk[CUNUM_NUC];
+	double Root[NUM_NUC];
 };
 
 } /* namespace seqpred */

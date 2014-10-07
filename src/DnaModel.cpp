@@ -17,9 +17,6 @@ using namespace std;
 
 namespace seqpred {
 
-#define SQNUM_NUC 4*4
-#define NUM_NUC 4
-#define CUNUM_NUC 256
 #define pos(i,j,n)      ((i)*(n)+(j))
 
 #define BASE        2    /* base of floating point arithmetic */
@@ -30,7 +27,7 @@ typedef struct {
 	double re, im;
 } complex;
 
-static double Cijk[CUNUM_NUC], Root[NUM_NUC];
+//static double Cijk[CUNUM_NUC], Root[NUM_NUC];
 
 DnaModel::DnaModel(partitionList * pllPartitions, int partitionIndex) :
 		Model(pllPartitions, partitionIndex) {
@@ -45,71 +42,42 @@ DnaModel::DnaModel(partitionList * pllPartitions, int partitionIndex) :
 	SetupGTR();
 }
 
+double computeFracchange(double * freqs, double * substRates) {
+	/* convert rates into matrix */
+	double r[4][4];
+	int i = 0;
+	for (int j = 0; j < 3; j++)
+		for (int k = j + 1; k < 4; k++)
+			r[j][k] = substRates[i++];
+	for (int j = 0; j < 4; j++) {
+		r[j][j] = 0.0;
+		for (int k = 0; k < j; k++)
+			r[j][k] = r[k][j];
+	}
+	/* evaluate fracchange */
+	double fracchange = 0.0;
+	for (int j = 0; j < 4; j++)
+		for (int k = 0; k < 4; k++)
+			fracchange += freqs[j] * r[j][k] * freqs[k];
+	return fracchange;
+}
+
 void DnaModel::SetupGTR() {
-	int i, j, k;
-	double mr;
-	double sum;
-	double Qij[SQNUM_NUC];
-	double U[SQNUM_NUC], V[SQNUM_NUC], T1[SQNUM_NUC], T2[SQNUM_NUC];
 
-	k = 0;
-	for (i = 0; i < NUM_NUC - 1; i++) {
-		for (j = i + 1; j < NUM_NUC; j++) {
-			Qij[i * NUM_NUC + j] = Qij[j * NUM_NUC + i] = substRates[k++];
-		}
+	double fracchange = computeFracchange(partitionInfo->frequencies, partitionInfo->substRates);
+	for (int i = 0; i < NUM_NUC; i++) {
+		Root[i] = -partitionInfo->EIGN[i] / fracchange;
 	}
 
-	for (i = 0; i < NUM_NUC; i++) {
-		for (j = 0; j < NUM_NUC; j++) {
-			Qij[i * NUM_NUC + j] *= frequencies[j];
-		}
-	}
-
-	mr = 0;
-	for (i = 0; i < NUM_NUC; i++) {
-		sum = 0;
-		Qij[i * NUM_NUC + i] = 0;
-		for (j = 0; j < NUM_NUC; j++) {
-			sum += Qij[i * NUM_NUC + j];
-		}
-		Qij[i * NUM_NUC + i] = -sum;
-		mr += frequencies[i] * sum;
-	}
-
-	Utils::abyx(1.0 / mr, Qij, SQNUM_NUC);
-
-	if ((k = Utils::eigen(1, Qij, NUM_NUC, Root, T1, U, V, T2)) != 0) {
-		fprintf(stderr, "\ncomplex roots in SetupGTR");
-		assert(0);
-	}
-
-	Utils::xtoy(U, V, SQNUM_NUC);
-	Utils::matinv(V, NUM_NUC, NUM_NUC, T1);
-
-	for (i = 0; i < NUM_NUC; i++) {
-		for (j = 0; j < NUM_NUC; j++) {
-			for (k = 0; k < NUM_NUC; k++) {
-				Cijk[i * SQNUM_NUC + j * NUM_NUC + k] = U[i * NUM_NUC + k]
-						* V[k * NUM_NUC + j];
+	for (int i = 0; i < NUM_NUC; i++) {
+		for (int j = 0; j < NUM_NUC; j++) {
+			for (int k = 0; k < NUM_NUC; k++) {
+				Cijk[i * SQNUM_NUC + j * NUM_NUC + k] = partitionInfo->EI[i * NUM_NUC + k]
+										* partitionInfo->EV[j * NUM_NUC + k];
 			}
 		}
 	}
 
-	/**
-	 * TODO: OUTPUT FOR THIS FUNCTION ARE Cijk AND Root
-	 * 	     CHECK WHETHER THIS IS NECESSARY
-	 */
-//	cout << "Cijk: ";
-//	Utils::printVector(Cijk, CUNUM_NUC);
-//	cout << "Root ";
-//	Utils::printVector(Root, NUM_NUC);
-//	Utils::printVector(partitionInfo->EIGN, NUM_NUC);
-//	cout << "U, V ";
-//	Utils::printVector(U, SQNUM_NUC);
-//	Utils::printVector(V, SQNUM_NUC);
-//	cout << "EI, EV ";
-//		Utils::printVector(partitionInfo->EI, SQNUM_NUC);
-//		Utils::printVector(partitionInfo->EV, SQNUM_NUC);
 }
 
 void DnaModel::setMatrix(double * matrix, double branchLength) const {
