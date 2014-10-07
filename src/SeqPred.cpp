@@ -216,6 +216,13 @@ int main(int argc, char * argv[]) {
 		exit(EX_IOERR);
 	}
 
+	if (pllPartitions->numberOfPartitions == 1) {
+		cout << endl <<
+				"*********************************************" << endl <<
+				"WARNING: There is only one partition." << endl <<
+				"         No branch lengths will be estimated." << endl <<
+				"*********************************************" << endl;
+	}
 #ifdef PRINT_TRACE
 	cout << " Make Tree " << endl;
 #endif

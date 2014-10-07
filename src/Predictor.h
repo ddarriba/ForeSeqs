@@ -38,13 +38,6 @@ public:
 		return missingSequences.size();
 	}
 
-	/**
-	* @brief Get the taxa with missing sequences
-	*/
-	const std::vector<int> getMissingSequences( void ) const {
-		return missingSequences;
-	}
-
 private:
 	/**
 	* @brief Check whether all taxa data in a subtree is missing

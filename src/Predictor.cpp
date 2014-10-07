@@ -223,7 +223,7 @@ void Predictor::evolveNode(nodeptr node, char * ancestralSequence) {
 #endif
 
 	double branchLength = computeBranchLength(node);
-	cout << "  - Estimated branch length for " << node->number << " (partition " << partitions->partitionData[partitionNumber]->partitionName << ") = " << branchLength << endl;
+	cout << "  - Estimated branch length for node " << node->number << " (partition " << partitions->partitionData[partitionNumber]->partitionName << ") = " << branchLength << endl;
 
 	char * currentSequence = (char *) malloc(strlen(ancestralSequence) + 1);
 	mutateSequence(currentSequence, ancestralSequence, branchLength);
@@ -236,7 +236,10 @@ void Predictor::evolveNode(nodeptr node, char * ancestralSequence) {
 		evolveNode(node->next->back, currentSequence);
 		evolveNode(node->next->next->back, currentSequence);
 	} else {
+		/* set the new sequence */
 		memcpy(&(phylip->sequenceData[node->number][start]), currentSequence, partitionLength);
+		/* remove visited taxon */
+		missingSequences.erase(remove(missingSequences.begin(), missingSequences.end(), node->number), missingSequences.end());
 	}
 	free(currentSequence);
 }
@@ -249,40 +252,41 @@ void Predictor::predictMissingSequences( void ) {
 	}
 #endif
 
-	if (!missingSequences.size())
-		return;
+	/* loop over all possible subtrees with missing data */
+	while (missingSequences.size()) {
+		cout << "Predicting subtree" << endl;
+		nodeptr ancestor = findMissingDataAncestor();
 
-	nodeptr ancestor = findMissingDataAncestor();
+		nodeptr startNode = ancestor;
 
-	nodeptr startNode = ancestor;
+	#ifdef PRINT_TRACE
+		cout << "TRACE: Updating partials for " << startNode->number << endl;
+	#endif
+		pllUpdatePartialsAncestral(tree, partitions, startNode);
+	#ifdef PRINT_TRACE
+		cout << "TRACE: Generating ancestral for " << startNode->number << endl;
+	#endif
 
-#ifdef PRINT_TRACE
-	cout << "TRACE: Updating partials for " << startNode->number << endl;
-#endif
-	pllUpdatePartialsAncestral(tree, partitions, startNode);
-#ifdef PRINT_TRACE
-	cout << "TRACE: Generating ancestral for " << startNode->number << endl;
-#endif
+		char * ancestral = (char *) malloc(sequenceLength + 1);
+		double * probs = (double *) malloc(
+				sequenceLength * numStates * sizeof(double));
+		pllGetAncestralState(tree, partitions, startNode, probs, ancestral);
+		free (probs);
 
-	char * ancestral = (char *) malloc(sequenceLength + 1);
-	double * probs = (double *) malloc(
-			sequenceLength * numStates * sizeof(double));
-	pllGetAncestralState(tree, partitions, startNode, probs, ancestral);
-	free (probs);
+		/* extract the ancestral for the partition */
+		char * partAncestral = (char *) malloc(partitionLength + 1);
+		memcpy(partAncestral, &(ancestral[start]), partitionLength);
+		partAncestral[partitionLength] = '\0';
+		free (ancestral);
 
-	/* extract the ancestral for the partition */
-	char * partAncestral = (char *) malloc(partitionLength + 1);
-	memcpy(partAncestral, &(ancestral[start]), partitionLength);
-	partAncestral[partitionLength] = '\0';
-	free (ancestral);
+	#ifdef DEBUG
+		printNodes(tree, partitions);
+		printBranchLengths(tree, partitions);
+	#endif
 
-#ifdef DEBUG
-	printNodes(tree, partitions);
-	printBranchLengths(tree, partitions);
-#endif
-
-	evolveNode(ancestor->back, partAncestral);
-	free(partAncestral);
+		evolveNode(ancestor->back, partAncestral);
+		free(partAncestral);
+	}
 }
 
 } /* namespace seqpred */
