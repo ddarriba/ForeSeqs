@@ -16,10 +16,9 @@ namespace seqpred {
 class Model {
 public:
 	Model(partitionList * pllPartitions, int partitionIndex);
-	void setMatrix(double * matrix, double branchLength);
+	virtual void setMatrix(double * matrix, double branchLength) const = 0;
 	virtual ~Model();
-private:
-	void SetupGTR();
+protected:
 
 	pInfo * partitionInfo;
 	std::vector<double> frequencies;

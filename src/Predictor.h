@@ -92,7 +92,7 @@ private:
 	int numStates;						/** Number of states (DNA=4, AA=20) */
 	int numRateCategories;				/** Number of gamma rate categories */
 	std::vector<int> missingSequences;	/** Vector of taxa with missing sequences */
-	Model curModel;						/** Model for computing the P matrix */
+	Model * curModel;						/** Model for computing the P matrix */
 };
 
 } /* namespace seqpred */

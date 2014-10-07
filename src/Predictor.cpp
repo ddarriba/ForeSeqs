@@ -11,6 +11,8 @@
 #include <iostream>
 #include <algorithm>
 #include <cstring>
+#include "DnaModel.h"
+
 #include <cassert>
 #include <cmath>
 
@@ -21,7 +23,14 @@ namespace seqpred {
 Predictor::Predictor(pllInstance * tree, partitionList * partitions,
 		pllAlignmentData * phylip, int partitionNumber) :
 		tree(tree), partitions(partitions), phylip(phylip), partitionNumber(
-				partitionNumber), curModel(partitions, partitionNumber) {
+				partitionNumber) {
+
+	if (dataType == DT_NUCLEIC) {
+		curModel = new DnaModel(partitions, partitionNumber);
+	} else {
+		cerr << "Unimplemented Data Type" << endl;
+		exit(EX_IOERR);
+	}
 
 	/* get information from the partition */
 	start = partitions->partitionData[partitionNumber]->lower;
@@ -44,7 +53,7 @@ Predictor::Predictor(pllInstance * tree, partitionList * partitions,
 }
 
 Predictor::~Predictor( void ) {
-	/* do nothing */
+	delete curModel;
 }
 
 vector<int> Predictor::findMissingSequences( void ) const {
@@ -147,25 +156,19 @@ void Predictor::mutateSequence(char * currentSequence,
 		categories[i]=(int)(numRateCategories * Utils::genRand());
 	}
 
-	short * R = categories;
-	char * P = currentSequence;
+	short * siteCatPtr = categories;
+	char * seqPtr = currentSequence;
 
-	double *matrix[4];
-	for (int i=0; i<4; i++) {
-		matrix[i] = (double*)malloc(16 * sizeof(double));
-	}
+	/* construct P matrix */
+	double matrix[4][16];
 	for (int i = 0; i < numRateCategories; i++) {
-		curModel.setMatrix(matrix[i], gammaRates[i] * branchLength);
+		curModel->setMatrix(matrix[i], gammaRates[i] * branchLength);
 	}
 	for (unsigned int i = 0; i < partitionLength; i++) {
-		*P = getState(matrix[*R]+((statesMap[*P]) * numStates));
-		P++;
-		R++;
+		*seqPtr = getState(matrix[*siteCatPtr]+((statesMap[*seqPtr]) * numStates));
+		seqPtr++;
+		siteCatPtr++;
 	}
-	for (int i = 0; i < 4; i++) {
-		free(matrix[i]);
-	}
-
 }
 
 #ifdef DEBUG
