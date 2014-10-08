@@ -7,8 +7,8 @@
 #include <cmath>
 #include <map>
 #include <vector>
-#include <algorithm>
 #include <cassert>
+#include <cstring>
 #include <getopt.h>
 
 using namespace std;
@@ -72,20 +72,35 @@ void exit_with_usage(char * command) {
 			"  %s -i inputFileName -t treeFileName [-q partitionsFileName] [-s seed] [-o outputFileName]\n",
 			command);
 	printf("\n");
-	printf("  -h, --help                           Shows this help message");
+	printf(
+			"  -d, --datatype   dataType            Set the data type (default: nucleic)");
 	printf("\n");
+	printf("      --datatype   nt                  Nucleic");
+	printf("\n");
+	printf("      --datatype   aa                  Proteic");
+	printf("\n\n");
+	printf("  -h, --help                           Shows this help message");
+	printf("\n\n");
 	printf(
 			"  -i, --input      inputFileName       Set the input alignment (mandatory)");
+	printf("\n\n");
+	printf(
+			"  -m, --model      substitution model  Set the substitution model (only for protein data)");
 	printf("\n");
+	printf(
+			"                                       DAYHOFF, DCMUT, JTT, JTTDCMUT, MTREV, WAG, RTREV, CPREV, VT,\n");
+	printf(
+			"                                       BLOSUM62, MTMAM, LG, MTART, MTZOA, PMB, HIVB, HIVW, FLU");
+	printf("\n\n");
 	printf(
 			"  -o, --output     outputFileName      Set the output filename (default: [inputFile].predicted)");
-	printf("\n");
+	printf("\n\n");
 	printf(
 			"  -q, --partitions partitionsFileName  Set the partitions definition");
-	printf("\n");
+	printf("\n\n");
 	printf(
 			"  -s, --seed       randomNumberSed     Set a custom seed (default: 12345)");
-	printf("\n");
+	printf("\n\n");
 	printf(
 			"  -t, --tree       treeFileName        Set the input tree (mandatory)");
 	printf("\n\n");
@@ -104,24 +119,65 @@ int main(int argc, char * argv[]) {
 	partitionList * pllPartitions = 0;
 	pllAlignmentData * pllAlignment = 0;
 	string inputfile, treefile, partitionsfile, outputfile;
+	string protModelString;
 	int randomNumberSeed = 12345;
 
-	static struct option long_options[] = { { "help", no_argument, 0, 'h' }, {
-			"input", required_argument, 0, 'i' }, { "tree", required_argument,
-			0, 't' }, { "partitions", required_argument, 0, 'q' }, { "seed",
-			required_argument, 0, 's' },
-			{ "output", required_argument, 0, 'o' }, { 0, 0, 0, 0 } };
+	bool setDataType = false;
+
+	static struct option long_options[] = {
+			{ "help", no_argument, 0, 'h' },
+			{ "datatype", required_argument, 0, 'd' },
+			{ "input", required_argument, 0, 'i' },
+			{ "model", required_argument, 0, 'm' },
+			{ "tree", required_argument, 0, 't' },
+			{ "partitions", required_argument, 0, 'q' },
+			{ "seed", required_argument, 0, 's' },
+			{ "output", required_argument, 0, 'o' },
+			{ 0, 0, 0, 0 } };
 
 	int opt = 0, long_index = 0;
-	while ((opt = getopt_long(argc, argv, "hi:t:q:n:o:", long_options,
+	while ((opt = getopt_long(argc, argv, "hd:i:m:t:q:s:o:", long_options,
 			&long_index)) != -1) {
 		switch (opt) {
+		case 'd':
+			if (!strcmp(optarg, "nt")) {
+				if ( seqpred::protModel > -1) {
+					cerr << "Error: You cannot specify a protein model and a nucleotide datatype" << endl;
+					exit(EX_IOERR);
+				}
+				seqpred::dataType = seqpred::DT_NUCLEIC;
+			} else if (!strcmp(optarg, "aa")) {
+				seqpred::dataType = seqpred::DT_PROTEIC;
+			} else {
+				cerr << "Error: Data type must be 'nt' (nucleotide) of 'aa' (amino acid)" << endl;
+				exit(EX_IOERR);
+			}
+			setDataType = true;
+			break;
 		case 'h':
 			exit_with_usage(argv[0]);
 			break;
 		case 'i':
 			inputfile = optarg;
 			break;
+		case 'm':
+		{
+			if ( setDataType && seqpred::dataType == seqpred::DT_NUCLEIC ) {
+				cerr << "Error: You cannot specify a protein model and a nucleotide datatype" << endl;
+				exit(EX_IOERR);
+			}
+			seqpred::dataType = seqpred::DT_PROTEIC;
+			seqpred::Utils::init();
+			protModelString = optarg;
+			if (
+				seqpred::protModelsMap.find(optarg) == seqpred::protModelsMap.end()) {
+				cerr << "Error: Unrecognized protein model " << optarg << endl;
+				exit(EX_IOERR);
+			} else {
+				seqpred::protModel = seqpred::protModelsMap[optarg];
+			}
+			break;
+		}
 		case 't':
 			treefile = optarg;
 			break;
@@ -210,6 +266,16 @@ int main(int argc, char * argv[]) {
 
 	pllPartitions = pllPartitionsCommit(pllPartsQueue, pllAlignment);
 	pllQueuePartitionsDestroy(&pllPartsQueue);
+
+	seqpred::numberOfStates = pllPartitions->partitionData[0]->states;
+	if (seqpred::numberOfStates == 4) {
+		seqpred::dataType = seqpred::DT_NUCLEIC;
+	} else if (seqpred::numberOfStates== 20) {
+		seqpred::dataType = seqpred::DT_PROTEIC;
+	} else {
+		cerr << "Error: Weird number of states " << seqpred::numberOfStates << endl;
+		exit(EX_IOERR);
+	}
 
 	if (!pllPartitions) {
 		cerr << "[ERROR] There was an error parsing partitions data." << endl;

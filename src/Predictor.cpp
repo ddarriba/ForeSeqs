@@ -12,6 +12,7 @@
 #include <algorithm>
 #include <cstring>
 #include "DnaModel.h"
+#include "ProteinModel.h"
 
 #include <cassert>
 #include <cmath>
@@ -28,8 +29,7 @@ Predictor::Predictor(pllInstance * tree, partitionList * partitions,
 	if (dataType == DT_NUCLEIC) {
 		curModel = new DnaModel(partitions, partitionNumber);
 	} else {
-		cerr << "Unimplemented Data Type" << endl;
-		exit(EX_IOERR);
+		curModel = new ProteinModel(partitions, partitionNumber);
 	}
 
 	/* get information from the partition */
@@ -124,13 +124,6 @@ nodeptr Predictor::findMissingDataAncestor( void ) const {
 	return 0;
 }
 
-char Predictor::getState(double * P) const {
-	int j;
-	double r = Utils::genRand();
-	for (j=0; r>(*P) && j<numStates-1; j++) P++;
-	return (states[pow(2,j)]);
-}
-
 void Predictor::mutateSequence(char * currentSequence,
 		char * ancestralSequence, double branchLength) {
 
@@ -165,7 +158,7 @@ void Predictor::mutateSequence(char * currentSequence,
 		curModel->setMatrix(matrix[i], gammaRates[i] * branchLength);
 	}
 	for (unsigned int i = 0; i < partitionLength; i++) {
-		*seqPtr = getState(matrix[*siteCatPtr]+((statesMap[*seqPtr]) * numStates));
+		*seqPtr = curModel->getState(matrix[*siteCatPtr]+((statesMap[*seqPtr]) * numStates));
 		seqPtr++;
 		siteCatPtr++;
 	}

@@ -59,7 +59,7 @@ public:
 	 * @param seq the encoded sequence (e.g., "12422481")
 	 * @param length the length of the sequence to print
 	 */
-	static void printSequence(const unsigned char * seq, int length);
+//	static void printSequence(const unsigned char * seq, int length);
 
 	/**
 	 * @brief Print a vector
@@ -85,6 +85,7 @@ public:
 };
 
 enum DataType { DT_NUCLEIC, DT_PROTEIC};	/** Data Type definition (nucleic or proteic) */
+
 extern DataType dataType;					/** Current data type */
 extern int numberOfStates;					/** Number of different states (4 for DNA, 20 for Proteins) */
 extern std::vector<char> states;			/** Vector of the different states */
@@ -93,6 +94,9 @@ extern std::map<char, int> statesMap;		/** Map of the states index according to 
 extern int numberOfTaxa;					/* Number of taxa */
 extern int sequenceLength;					/* Number of sites (aa/bp) */
 extern char ** taxaNames;					/* Name list of taxa */
+
+extern std::map<std::string, int> protModelsMap;
+extern int protModel;
 
 extern bool initialized;					/* Flag to check whether init was called */
 

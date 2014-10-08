@@ -21,6 +21,7 @@ public:
 	 * @brief Compute the P-Matrix for selecting the character to insert
 	 */
 	virtual void setMatrix(double * matrix, double branchLength) const = 0;
+	virtual char getState(double * Pmatrix) const = 0;
 	virtual ~Model();
 protected:
 	pInfo * partitionInfo;

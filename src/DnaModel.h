@@ -20,6 +20,7 @@ class DnaModel: public Model {
 public:
 	DnaModel(partitionList * pllPartitions, int partitionIndex);
 	virtual void setMatrix(double * matrix, double branchLength) const;
+	virtual char getState(double * Pmatrix) const;
 	virtual ~DnaModel();
 private:
 	void SetupGTR();

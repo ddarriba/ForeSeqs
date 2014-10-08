@@ -4,7 +4,7 @@ LDFLAGS=-g -Llibpll/lib -O4 -Wall
 LIBS=-lpll-sse3 -lm
 
 DBGFLAGS= # -DPRINT_ANCESTRAL -DPRINT_TRACE
-SOURCES=src/SeqPred.cpp src/Predictor.cpp src/DnaModel.cpp src/Model.cpp src/Utils.cpp
+SOURCES=src/SeqPred.cpp src/Predictor.cpp src/DnaModel.cpp src/ProteinModel.cpp src/Model.cpp src/Utils.cpp
 OBJECTS=$(SOURCES:.cpp=.o)
 EXECUTABLE=seqpred
 

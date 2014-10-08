@@ -53,6 +53,13 @@ double computeFracchange(vector<double> freqs, vector<double> substRates) {
 	return fracchange;
 }
 
+char DnaModel::getState(double * P) const {
+	int j;
+	double r = Utils::genRand();
+	for (j=0; r>(*P) && j<NUM_NUC-1; j++) P++;
+	return (states[pow(2,j)]);
+}
+
 void DnaModel::SetupGTR() {
 
 	double fracchange = computeFracchange(frequencies, substRates);
