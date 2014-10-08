@@ -8,8 +8,10 @@
 #ifndef MODEL_H_
 #define MODEL_H_
 
-#include <vector>
 #include "pll.h"
+
+#include <map>
+#include <vector>
 
 namespace seqpred {
 
@@ -22,11 +24,19 @@ public:
 	 */
 	virtual void setMatrix(double * matrix, double branchLength) const = 0;
 	virtual char getState(double * Pmatrix) const = 0;
+
+	int getStateIndex(char state) {
+		return statesMap[state];
+	}
+
 	virtual ~Model();
 protected:
-	pInfo * partitionInfo;
-	std::vector<double> frequencies;
-	std::vector<double> substRates;
+	double computeFracchange( void ) const;
+	pInfo * partitionInfo;				/** PLL Partition info */
+	std::vector<double> frequencies;	/** Frequencies */
+	std::vector<double> substRates;		/** Substitution rates */
+	std::vector<char> states;			/** Vector of the different states */
+	std::map<char, int> statesMap;		/** Map of the states index according to char */
 };
 
 } /* namespace seqpred */

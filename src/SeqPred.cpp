@@ -316,6 +316,7 @@ int main(int argc, char * argv[]) {
 		return (EX_IOERR);
 	}
 
+	cout << "Seting fixed topology " << endl;
 	pllTreeInitTopologyNewick(pllTree, nt, PLL_FALSE);
 
 	pllNewickParseDestroy(&nt);
@@ -330,6 +331,7 @@ int main(int argc, char * argv[]) {
 	cout << "TRACE: Initial log likelihood: " << pllTree->likelihood << endl;
 #endif
 
+	cout << "Optimizing per-gene branch lengths " << endl;
 	optimizeModelParameters(pllTree, pllPartitions);
 //	pllOptimizeModelParameters(pllTree, pllPartitions, 0.1);
 

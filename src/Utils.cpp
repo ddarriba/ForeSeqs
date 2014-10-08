@@ -38,15 +38,6 @@ void Utils::init() {
 	switch (dataType) {
 	case DT_NUCLEIC:
 		numberOfStates = 4;
-		states.resize(16);
-		states[1] = 'A'; //1; //A
-		states[2] = 'C'; //2; //C
-		states[4] = 'G'; //4; //G
-		states[8] = 'T'; //8; //T
-		statesMap['a'] = statesMap['A'] = 0;
-		statesMap['c'] = statesMap['C'] = 1;
-		statesMap['g'] = statesMap['G'] = 2;
-		statesMap['t'] = statesMap['T'] = 3;
 		break;
 	case DT_PROTEIC:
 		protModelsMap["DAYHOFF"]  = PLL_DAYHOFF;

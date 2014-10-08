@@ -30,27 +30,14 @@ DnaModel::DnaModel(partitionList * pllPartitions, int partitionIndex) :
 	memcpy(&(frequencies[0]), partitionInfo->frequencies, numFreqs * sizeof(double));
 	memcpy(&(substRates[0]), partitionInfo->substRates, numRates * sizeof(double));
 
-	SetupGTR();
-}
+	char statesChar[16] = {'_', 'A', 'C', 'M', 'G', 'R', 'S', 'V', 'T', 'W', 'Y', 'H', 'K', 'D', 'B', '-'};
+	states.assign(&statesChar[0], &statesChar[0]+16);
+	statesMap['a'] = statesMap['A'] = 0;
+	statesMap['c'] = statesMap['C'] = 1;
+	statesMap['g'] = statesMap['G'] = 2;
+	statesMap['t'] = statesMap['T'] = 3;
 
-double computeFracchange(vector<double> freqs, vector<double> substRates) {
-	/* convert rates into matrix */
-	double r[NUM_NUC][NUM_NUC];
-	int i = 0;
-	for (int j = 0; j < (NUM_NUC-1); j++)
-		for (int k = j + 1; k < NUM_NUC; k++)
-			r[j][k] = substRates[i++];
-	for (int j = 0; j < NUM_NUC; j++) {
-		r[j][j] = 0.0;
-		for (int k = 0; k < j; k++)
-			r[j][k] = r[k][j];
-	}
-	/* evaluate fracchange */
-	double fracchange = 0.0;
-	for (int j = 0; j < NUM_NUC; j++)
-		for (int k = 0; k < NUM_NUC; k++)
-			fracchange += freqs[j] * r[j][k] * freqs[k];
-	return fracchange;
+	SetupGTR();
 }
 
 char DnaModel::getState(double * P) const {
@@ -62,7 +49,7 @@ char DnaModel::getState(double * P) const {
 
 void DnaModel::SetupGTR() {
 
-	double fracchange = computeFracchange(frequencies, substRates);
+	double fracchange = computeFracchange();
 	for (int i = 0; i < NUM_NUC; i++) {
 		Root[i] = -partitionInfo->EIGN[i] / fracchange;
 	}

@@ -54,14 +54,6 @@ public:
 	static void printSequence(const char * seq);
 
 	/**
-	 * @brief Print an encoded sequence
-	 *
-	 * @param seq the encoded sequence (e.g., "12422481")
-	 * @param length the length of the sequence to print
-	 */
-//	static void printSequence(const unsigned char * seq, int length);
-
-	/**
 	 * @brief Print a vector
 	 *
 	 * @param vec the vector of doubles
@@ -88,8 +80,6 @@ enum DataType { DT_NUCLEIC, DT_PROTEIC};	/** Data Type definition (nucleic or pr
 
 extern DataType dataType;					/** Current data type */
 extern int numberOfStates;					/** Number of different states (4 for DNA, 20 for Proteins) */
-extern std::vector<char> states;			/** Vector of the different states */
-extern std::map<char, int> statesMap;		/** Map of the states index according to char */
 
 extern int numberOfTaxa;					/* Number of taxa */
 extern int sequenceLength;					/* Number of sites (aa/bp) */

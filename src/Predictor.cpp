@@ -44,11 +44,9 @@ Predictor::Predictor(pllInstance * tree, partitionList * partitions,
 	/* get taxa with missing data in the partition */
 	missingSequences = findMissingSequences();
 
-	/* create the different states */
-	/* TODO: So far we set it to DNA states */
-	if (numStates != 4) {
-		cerr << " Not implemented yet for " << numStates << " states" << endl;
-		exit(1);
+	if (numStates != 4 && numStates != 20) {
+		cerr << " Not implemented for " << numStates << " states" << endl;
+		exit(EX_IOERR);
 	}
 }
 
@@ -59,11 +57,12 @@ Predictor::~Predictor( void ) {
 vector<int> Predictor::findMissingSequences( void ) const {
 	vector<int> missingSeqs;
 
+	unsigned char undefinedSite = numStates==4?15:22;
 	int missing;
 	for (int i = 1; i <= tree->ntips; i++) {
 		missing = 1;
 		for (unsigned int j = start; j < end; j++) {
-			missing &= (tree->yVector[i][j] == PLL_UNDEFINED_SITE);
+			missing &= (tree->yVector[i][j] == undefinedSite);
 		}
 		if (missing) {
 			missingSeqs.push_back(i);
@@ -153,12 +152,12 @@ void Predictor::mutateSequence(char * currentSequence,
 	char * seqPtr = currentSequence;
 
 	/* construct P matrix */
-	double matrix[4][16];
+	double matrix[4][numberOfStates*numberOfStates];
 	for (int i = 0; i < numRateCategories; i++) {
 		curModel->setMatrix(matrix[i], gammaRates[i] * branchLength);
 	}
 	for (unsigned int i = 0; i < partitionLength; i++) {
-		*seqPtr = curModel->getState(matrix[*siteCatPtr]+((statesMap[*seqPtr]) * numStates));
+		*seqPtr = curModel->getState(matrix[*siteCatPtr]+(curModel->getStateIndex(*seqPtr) * numStates));
 		seqPtr++;
 		siteCatPtr++;
 	}
