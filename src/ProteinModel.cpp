@@ -23,44 +23,44 @@ namespace seqpred {
 ProteinModel::ProteinModel(partitionList * pllPartitions, int partitionIndex) :
 		Model(pllPartitions, partitionIndex) {
 
-	assert(partitionInfo->states == NUM_AA);
+	assert(_pllPartitionInfo->states == NUM_AA);
 	assert(numberOfStates == NUM_AA);
 
 	int numFreqs = NUM_AA;
 	int numRates = (NUM_AA - 1) * NUM_AA / 2;
-	frequencies.resize(numFreqs);
-	substRates.resize(numRates);
-	memcpy(&(frequencies[0]), partitionInfo->frequencies,
+	_frequencies.resize(numFreqs);
+	_substRates.resize(numRates);
+	memcpy(&(_frequencies[0]), _pllPartitionInfo->frequencies,
 			numFreqs * sizeof(double));
-	memcpy(&(substRates[0]), partitionInfo->substRates,
+	memcpy(&(_substRates[0]), _pllPartitionInfo->substRates,
 			numRates * sizeof(double));
 
 	char statesChar[23] = { 'A', 'R', 'N', 'D', 'C', 'Q', 'E', 'G', 'H', 'I',
 			'L', 'K', 'M', 'F', 'P', 'S', 'T', 'W', 'Y', 'V', 'B', 'Z', '-' };
-	states.assign(&statesChar[0], &statesChar[0] + 23);
-	statesMap['a'] = statesMap['A'] = 0;
-	statesMap['r'] = statesMap['R'] = 1;
-	statesMap['n'] = statesMap['N'] = 2;
-	statesMap['d'] = statesMap['D'] = 3;
-	statesMap['c'] = statesMap['C'] = 4;
-	statesMap['q'] = statesMap['Q'] = 5;
-	statesMap['e'] = statesMap['E'] = 6;
-	statesMap['g'] = statesMap['G'] = 7;
-	statesMap['h'] = statesMap['H'] = 8;
-	statesMap['i'] = statesMap['I'] = 9;
-	statesMap['l'] = statesMap['L'] = 10;
-	statesMap['k'] = statesMap['K'] = 11;
-	statesMap['m'] = statesMap['M'] = 12;
-	statesMap['f'] = statesMap['F'] = 13;
-	statesMap['p'] = statesMap['P'] = 14;
-	statesMap['s'] = statesMap['S'] = 15;
-	statesMap['t'] = statesMap['T'] = 16;
-	statesMap['w'] = statesMap['W'] = 17;
-	statesMap['y'] = statesMap['Y'] = 18;
-	statesMap['v'] = statesMap['V'] = 19;
-	statesMap['b'] = statesMap['B'] = 20;
-	statesMap['z'] = statesMap['Z'] = 21;
-	statesMap['-'] = statesMap['?'] = 22;
+	_charStates.assign(&statesChar[0], &statesChar[0] + 23);
+	_statesToIntMap['a'] = _statesToIntMap['A'] = 0;
+	_statesToIntMap['r'] = _statesToIntMap['R'] = 1;
+	_statesToIntMap['n'] = _statesToIntMap['N'] = 2;
+	_statesToIntMap['d'] = _statesToIntMap['D'] = 3;
+	_statesToIntMap['c'] = _statesToIntMap['C'] = 4;
+	_statesToIntMap['q'] = _statesToIntMap['Q'] = 5;
+	_statesToIntMap['e'] = _statesToIntMap['E'] = 6;
+	_statesToIntMap['g'] = _statesToIntMap['G'] = 7;
+	_statesToIntMap['h'] = _statesToIntMap['H'] = 8;
+	_statesToIntMap['i'] = _statesToIntMap['I'] = 9;
+	_statesToIntMap['l'] = _statesToIntMap['L'] = 10;
+	_statesToIntMap['k'] = _statesToIntMap['K'] = 11;
+	_statesToIntMap['m'] = _statesToIntMap['M'] = 12;
+	_statesToIntMap['f'] = _statesToIntMap['F'] = 13;
+	_statesToIntMap['p'] = _statesToIntMap['P'] = 14;
+	_statesToIntMap['s'] = _statesToIntMap['S'] = 15;
+	_statesToIntMap['t'] = _statesToIntMap['T'] = 16;
+	_statesToIntMap['w'] = _statesToIntMap['W'] = 17;
+	_statesToIntMap['y'] = _statesToIntMap['Y'] = 18;
+	_statesToIntMap['v'] = _statesToIntMap['V'] = 19;
+	_statesToIntMap['b'] = _statesToIntMap['B'] = 20;
+	_statesToIntMap['z'] = _statesToIntMap['Z'] = 21;
+	_statesToIntMap['-'] = _statesToIntMap['?'] = 22;
 	SetupGTR();
 }
 
@@ -68,29 +68,30 @@ ProteinModel::~ProteinModel() {
 	/* do nothing */
 }
 
-void ProteinModel::SetupGTR() {
+void ProteinModel::SetupGTR( void ) {
 
 	double fracchange = computeFracchange();
 	for (int i = 0; i < NUM_AA; i++) {
-		Root[i] = -partitionInfo->EIGN[i] / fracchange;
+		_eigenValues[i] = -_pllPartitionInfo->EIGN[i] / fracchange;
 	}
 
 	for (int i = 0; i < NUM_AA; i++) {
 		for (int j = 0; j < NUM_AA; j++) {
 			for (int k = 0; k < NUM_AA; k++) {
-				Cijk[i * SQNUM_AA + j * NUM_AA + k] = partitionInfo->EI[i * NUM_AA + k]
-										* partitionInfo->EV[j * NUM_AA + k];
+				_Cijk[i * SQNUM_AA + j * NUM_AA + k] = _pllPartitionInfo->EI[i * NUM_AA + k]
+										* _pllPartitionInfo->EV[j * NUM_AA + k];
 			}
 		}
 	}
 
 }
 
-char ProteinModel::getState(double * P) const {
+char ProteinModel::getState(const double * pMatrix) const {
 	int j;
+	const double *P = pMatrix;
 	double r = Utils::genRand();
 	for (j=0; r>(*P) && j<NUM_AA-1; j++) P++;
-	return (states[j]);
+	return (_charStates[j]);
 }
 
 void ProteinModel::setMatrix(double * matrix, double branchLength) const {
@@ -114,13 +115,13 @@ void ProteinModel::setMatrix(double * matrix, double branchLength) const {
 	}
 
 	for (k = 1; k < NUM_AA; k++) {
-		expt[k] = exp(branchLength * Root[k]);
+		expt[k] = exp(branchLength * _eigenValues[k]);
 	}
 	for (i = 0; i < NUM_AA; i++) {
 		for (j = 0; j < NUM_AA; j++) {
-			(*P) = Cijk[i * SQNUM_AA + j * NUM_AA + 0];
+			(*P) = _Cijk[i * SQNUM_AA + j * NUM_AA + 0];
 			for (k = 1; k < NUM_AA; k++) {
-				(*P) += Cijk[i * SQNUM_AA + j * NUM_AA + k] * expt[k];
+				(*P) += _Cijk[i * SQNUM_AA + j * NUM_AA + k] * expt[k];
 			}
 			P++;
 		}

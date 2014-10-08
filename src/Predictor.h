@@ -35,14 +35,14 @@ public:
 	 * @brief Get the number of taxa with missing sequences
 	 */
 	int getNumberOfMissingSequences(void) const {
-		return missingSequences.size();
+		return _missingSequences.size();
 	}
 
 private:
 	/**
 	* @brief Check whether all taxa data in a subtree is missing
 	*/
-	boolean subtreeIsMissing(nodeptr node) const;
+	boolean subtreeIsMissing(const nodeptr node) const;
 
 	/**
 	* @brief Find the farthest common ancestor with all missing data
@@ -58,34 +58,27 @@ private:
 	/**
 	* @brief Mutates a sequence following the current model starting from the ancestor sequence
 	*/
-	void mutateSequence ( char * currentSequence, char * ancestralSequence, double branchLength );
+	void mutateSequence ( char * currentSequence, const char * ancestralSequence, double branchLength );
 
 	/**
 	* @brief Predict the sequences for a whole subtree
 	*/
-	void evolveNode(nodeptr node, char * ancestralSequence);
-
-	/**
-	* @brief Get the new state according to a cumulative probability vector P
-	*/
-	char getState(double * P) const;
+	void evolveNode(const nodeptr node, const char * ancestralSequence);
 
 	/**
 	 * @brief Compute the branch length for a node
 	 */
-	double computeBranchLength(nodeptr node) const;
+	double computeBranchLength(const nodeptr node) const;
 
-	pllInstance * tree;					/** PLL instance */
-	partitionList * partitions;			/** PLL list of partitions */
-	pllAlignmentData * phylip;			/** PLL alignment data */
-	int partitionNumber;				/** Partition for predicting the sequences */
-	unsigned int start;					/** Starting position of the partition */
-	unsigned int end; 					/** Ending position of the partition */
-	unsigned int partitionLength;				/** Number of sites (length) of the partition */
-	int numStates;						/** Number of states (DNA=4, AA=20) */
-	int numRateCategories;				/** Number of gamma rate categories */
-	std::vector<int> missingSequences;	/** Vector of taxa with missing sequences */
-	Model * curModel;						/** Model for computing the P matrix */
+	pllInstance * _pllTree;				/** PLL instance */
+	partitionList * _pllPartitions;		/** PLL list of partitions */
+	pllAlignmentData * _pllAlignment;	/** PLL alignment data */
+	int _partitionNumber;				/** Partition for predicting the sequences */
+	unsigned int _start;				/** Starting position of the partition */
+	unsigned int _end; 					/** Ending position of the partition */
+	unsigned int _partitionLength;		/** Number of sites (length) of the partition */
+	std::vector<int> _missingSequences;	/** Vector of taxa with missing sequences */
+	Model * _currentModel;				/** Model for computing the P matrix */
 };
 
 } /* namespace seqpred */

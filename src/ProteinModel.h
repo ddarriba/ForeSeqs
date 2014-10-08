@@ -21,18 +21,18 @@ namespace seqpred {
 class ProteinModel: public Model {
 public:
 	ProteinModel(partitionList * pllPartitions, int partitionIndex);
-	virtual void setMatrix(double * matrix, double branchLength) const;
-	virtual char getState(double * Pmatrix) const;
+	virtual void setMatrix(double * pMatrix, double branchLength) const;
+	virtual char getState(const double * pMatrix) const;
 	virtual ~ProteinModel();
 private:
 
 	/**
 	 * @brief Setup the Q matrix
 	 */
-	void SetupGTR();
+	void SetupGTR( void );
 
-	double Cijk[CUNUM_AA];
-	double Root[NUM_AA];
+	double _Cijk[CUNUM_AA];
+	double _eigenValues[NUM_AA];
 };
 
 } /* namespace seqpred */

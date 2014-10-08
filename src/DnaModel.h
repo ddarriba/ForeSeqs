@@ -19,18 +19,18 @@ namespace seqpred {
 class DnaModel: public Model {
 public:
 	DnaModel(partitionList * pllPartitions, int partitionIndex);
-	virtual void setMatrix(double * matrix, double branchLength) const;
-	virtual char getState(double * Pmatrix) const;
+	virtual void setMatrix(double * pMatrix, double branchLength) const;
+	virtual char getState(const double * pMatrix) const;
 	virtual ~DnaModel();
 private:
 
 	/**
 	 * @brief Setup the Q matrix
 	 */
-	void SetupGTR();
+	void SetupGTR( void );
 
-	double Cijk[CUNUM_NUC];
-	double Root[NUM_NUC];
+	double _Cijk[CUNUM_NUC];
+	double _eigenValues[NUM_NUC];
 };
 
 } /* namespace seqpred */

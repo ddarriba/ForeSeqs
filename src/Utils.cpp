@@ -19,6 +19,8 @@ namespace seqpred {
 
 DataType dataType = DT_NUCLEIC;
 
+/* Number of categories hardcoded to 4 */
+int numberOfRateCategories = 4;
 int numberOfStates;
 int numberOfTaxa, sequenceLength;
 char ** taxaNames;

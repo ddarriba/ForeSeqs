@@ -21,6 +21,8 @@
 
 namespace seqpred {
 
+enum DataType { DT_NUCLEIC, DT_PROTEIC};	/** Data Type definition (nucleic or proteic) */
+
 class Utils {
 public:
 	/**
@@ -72,11 +74,9 @@ public:
 
 };
 
-enum DataType { DT_NUCLEIC, DT_PROTEIC};	/** Data Type definition (nucleic or proteic) */
-
 extern DataType dataType;					/** Current data type */
 extern int numberOfStates;					/** Number of different states (4 for DNA, 20 for Proteins) */
-
+extern int numberOfRateCategories;			/** Number of gamma rate categories */
 extern int numberOfTaxa;					/* Number of taxa */
 extern int sequenceLength;					/* Number of sites (aa/bp) */
 extern char ** taxaNames;					/* Name list of taxa */

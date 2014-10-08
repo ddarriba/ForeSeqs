@@ -23,33 +23,44 @@ public:
 
 	/**
 	 * @brief Compute the P-Matrix for selecting the character to insert
+	 *
+	 * @param[out] Pmatrix the (already allocated) P matrix
+	 * @param[in] branchLength the branch length
 	 */
-	virtual void setMatrix(double * matrix, double branchLength) const = 0;
+	virtual void setMatrix(double * pMatrix, double branchLength) const = 0;
 
 	/**
 	 * @brief Get the randomly selected state according to a probability matrix
+	 *
+	 * @param[int] Pmatrix the P matrix
+	 * @return the randomly selected char
 	 */
-	virtual char getState(double * Pmatrix) const = 0;
+	virtual char getState(const double * pMatrix) const = 0;
 
 	/**
 	 * @brief Get the index for a state character
+	 *
+	 * @param[in] state the state char
+	 * @return the index of the state
 	 */
 	int getStateIndex(char state) {
-		return statesMap[state];
+		return _statesToIntMap[state];
 	}
 
 protected:
 
 	/**
 	 * @brief Compute the fracchange value according to frequencies and substRates
+	 *
+	 * @return the fracchange
 	 */
 	double computeFracchange( void ) const;
 
-	pInfo * partitionInfo;				/** PLL Partition info */
-	std::vector<double> frequencies;	/** Frequencies */
-	std::vector<double> substRates;		/** Substitution rates */
-	std::vector<char> states;			/** Vector of the different states */
-	std::map<char, int> statesMap;		/** Map of the states index according to char */
+	pInfo * _pllPartitionInfo;				/** PLL Partition info */
+	std::vector<double> _frequencies;		/** Frequencies */
+	std::vector<double> _substRates;		/** Substitution rates */
+	std::vector<char> _charStates;			/** Vector of the different states */
+	std::map<char, int> _statesToIntMap;	/** Map of the states index according to char */
 };
 
 } /* namespace seqpred */

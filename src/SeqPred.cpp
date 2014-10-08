@@ -5,10 +5,7 @@
 #include <iostream>
 #include <cstdlib>
 #include <cmath>
-#include <map>
-#include <vector>
 #include <cassert>
-#include <cstring>
 #include <getopt.h>
 
 using namespace std;
@@ -229,6 +226,14 @@ int main(int argc, char * argv[]) {
 	} else {
 		cerr << "[ERROR] Weird number of states " << seqpred::numberOfStates << endl;
 		exit(EX_IOERR);
+	}
+	for (int i=0; i<pllPartitions->numberOfPartitions; i++) {
+		if (pllPartitions->partitionData[i]->states != seqpred::numberOfStates) {
+			cerr << "[ERROR] There are partitions with a different number of states:" << endl;
+			cerr << "        Partition " << pllPartitions->partitionData[0]->partitionName << " : " << pllPartitions->partitionData[0]->states << " states. "<< endl;
+			cerr << "        Partition " << pllPartitions->partitionData[i]->partitionName << " : " << pllPartitions->partitionData[i]->states << " states. "<< endl;
+			exit(EX_IOERR);
+		}
 	}
 
 	if (!pllPartitions) {

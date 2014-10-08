@@ -6,16 +6,14 @@
  */
 
 #include "Predictor.h"
+#include "DnaModel.h"
+#include "ProteinModel.h"
 #include "Utils.h"
 
 #include <iostream>
 #include <algorithm>
 #include <cstring>
-#include "DnaModel.h"
-#include "ProteinModel.h"
-
 #include <cassert>
-#include <cmath>
 
 using namespace std;
 
@@ -23,46 +21,38 @@ namespace seqpred {
 
 Predictor::Predictor(pllInstance * tree, partitionList * partitions,
 		pllAlignmentData * phylip, int partitionNumber) :
-		tree(tree), partitions(partitions), phylip(phylip), partitionNumber(
+		_pllTree(tree), _pllPartitions(partitions), _pllAlignment(phylip), _partitionNumber(
 				partitionNumber) {
 
 	if (dataType == DT_NUCLEIC) {
-		curModel = new DnaModel(partitions, partitionNumber);
+		_currentModel = new DnaModel(partitions, partitionNumber);
 	} else {
-		curModel = new ProteinModel(partitions, partitionNumber);
+		_currentModel = new ProteinModel(partitions, partitionNumber);
 	}
 
 	/* get information from the partition */
-	start = partitions->partitionData[partitionNumber]->lower;
-	end = partitions->partitionData[partitionNumber]->upper;
-	partitionLength = end - start;
-	numStates = partitions->partitionData[partitionNumber]->states;
-
-	/* number of gamma rate categories fixed to 4 */
-	numRateCategories = 4;
+	_start = partitions->partitionData[partitionNumber]->lower;
+	_end = partitions->partitionData[partitionNumber]->upper;
+	_partitionLength = _end - _start;
 
 	/* get taxa with missing data in the partition */
-	missingSequences = findMissingSequences();
+	_missingSequences = findMissingSequences();
 
-	if (numStates != 4 && numStates != 20) {
-		cerr << " Not implemented for " << numStates << " states" << endl;
-		exit(EX_IOERR);
-	}
 }
 
 Predictor::~Predictor( void ) {
-	delete curModel;
+	delete _currentModel;
 }
 
 vector<int> Predictor::findMissingSequences( void ) const {
 	vector<int> missingSeqs;
 
-	unsigned char undefinedSite = numStates==4?15:22;
+	unsigned char undefinedSite = (numberOfStates==4)?15:22;
 	int missing;
-	for (int i = 1; i <= tree->ntips; i++) {
+	for (int i = 1; i <= _pllTree->ntips; i++) {
 		missing = 1;
-		for (unsigned int j = start; j < end; j++) {
-			missing &= (tree->yVector[i][j] == undefinedSite);
+		for (unsigned int j = _start; j < _end; j++) {
+			missing &= (_pllTree->yVector[i][j] == undefinedSite);
 		}
 		if (missing) {
 			missingSeqs.push_back(i);
@@ -74,14 +64,15 @@ vector<int> Predictor::findMissingSequences( void ) const {
 /*
  * Search if all the taxa in a subtree have missing sequences.
  * TODO: This algorithm can be improved using a hashtable for storing the already evaluated nodes.
+ * However, the time taken for this part is negligible compared to the rest.
  */
-boolean Predictor::subtreeIsMissing(nodeptr node) const {
-	if (node->number > tree->mxtips) {
+boolean Predictor::subtreeIsMissing(const nodeptr node) const {
+	if (node->number > _pllTree->mxtips) {
 		return (subtreeIsMissing(node->next->back)
 				& subtreeIsMissing(node->next->next->back));
 	} else {
-		return (find(missingSequences.begin(), missingSequences.end(),
-				node->number) != missingSequences.end());
+		return (find(_missingSequences.begin(), _missingSequences.end(),
+				node->number) != _missingSequences.end());
 	}
 }
 
@@ -89,13 +80,13 @@ nodeptr Predictor::findMissingDataAncestor( void ) const {
 
 	nodeptr currentNode;
 
-	if (!missingSequences.size()) {
+	if (!_missingSequences.size()) {
 		cerr << "ERROR: No missing sequences" << endl;
 		return(0);
 	}
 
 	/* start searching in a random missing node */
-	currentNode = tree->nodep[missingSequences[0]]->back;
+	currentNode = _pllTree->nodep[_missingSequences[0]]->back;
 
 	while (true) {
 		bool missingRight = subtreeIsMissing(currentNode->next->back);
@@ -124,11 +115,11 @@ nodeptr Predictor::findMissingDataAncestor( void ) const {
 }
 
 void Predictor::mutateSequence(char * currentSequence,
-		char * ancestralSequence, double branchLength) {
+		const char * ancestralSequence, double branchLength) {
 
-	if ( partitionLength != strlen(ancestralSequence) ) {
+	if ( _partitionLength != strlen(ancestralSequence) ) {
 		cerr << "ERROR: Length of ancestral sequence (" << strlen(ancestralSequence)
-				<< ") differ from the expected length (" << partitionLength << ")" << endl;
+				<< ") differ from the expected length (" << _partitionLength << ")" << endl;
 		assert(0);
 	}
 
@@ -139,70 +130,70 @@ void Predictor::mutateSequence(char * currentSequence,
 	/* start mutating the ancestral sequence */
 	strcpy(currentSequence, ancestralSequence);
 
-	double gammaRates[numRateCategories];
-	pllMakeGammaCats(partitions->partitionData[partitionNumber]->alpha,gammaRates, numRateCategories, false);
+	double gammaRates[numberOfRateCategories];
+	pllMakeGammaCats(_pllPartitions->partitionData[_partitionNumber]->alpha,gammaRates, numberOfRateCategories, false);
 
 	/* random assignment of sites to categories */
-	short categories[partitionLength];
-	for (unsigned int i=0; i<partitionLength; i++) {
-		categories[i]=(int)(numRateCategories * Utils::genRand());
+	short categories[_partitionLength];
+	for (unsigned int i=0; i<_partitionLength; i++) {
+		categories[i]=(int)(numberOfRateCategories * Utils::genRand());
 	}
 
 	short * siteCatPtr = categories;
 	char * seqPtr = currentSequence;
 
 	/* construct P matrix */
-	double matrix[4][numberOfStates*numberOfStates];
-	for (int i = 0; i < numRateCategories; i++) {
-		curModel->setMatrix(matrix[i], gammaRates[i] * branchLength);
+	double matrix[numberOfRateCategories][numberOfStates*numberOfStates];
+	for (int i = 0; i < numberOfRateCategories; i++) {
+		_currentModel->setMatrix(matrix[i], gammaRates[i] * branchLength);
 	}
-	for (unsigned int i = 0; i < partitionLength; i++) {
-		*seqPtr = curModel->getState(matrix[*siteCatPtr]+(curModel->getStateIndex(*seqPtr) * numStates));
+	for (unsigned int i = 0; i < _partitionLength; i++) {
+		*seqPtr = _currentModel->getState(matrix[*siteCatPtr]+(_currentModel->getStateIndex(*seqPtr) * numberOfStates));
 		seqPtr++;
 		siteCatPtr++;
 	}
 }
 
 #ifdef DEBUG
-void printNodes(pllInstance * tree, partitionList * partitions) {
+void printNodes(pllInstance * _pllTree, partitionList * _pllPartitions) {
 	/* compute the branch length as the average over all other partitions */
-	for (int node = 1; node <= 2 * tree->mxtips - 3; node++) {
-		cout << node << " " << tree->nodep[node]->next->back->number << " "
-				<< tree->nodep[node]->next->next->back->number << endl;
+	for (int node = 1; node <= 2 * _pllTree->mxtips - 3; node++) {
+		cout << node << " " << _pllTree->nodep[node]->next->back->number << " "
+				<< _pllTree->nodep[node]->next->next->back->number << endl;
 	}
 }
 
-void printBranchLengths(pllInstance * tree, partitionList * partitions) {
+void printBranchLengths(pllInstance * _pllTree, partitionList * _pllPartitions) {
 	/* compute the branch length as the average over all other partitions */
-	for (int i=0; i<partitions->numberOfPartitions; i++) {
+	for (int i=0; i<_pllPartitions->numberOfPartitions; i++) {
 		cout << i << " -> ";
-		for (int node=1; node <= 2*tree->mxtips-3; node++) {
-			cout << " " << pllGetBranchLength(tree, tree->nodep[node], i);
+		for (int node=1; node <= 2*_pllTree->mxtips-3; node++) {
+			cout << " " << pllGetBranchLength(_pllTree, _pllTree->nodep[node], i);
 		}
 		cout << endl;
 	}
 }
 #endif
 
-double Predictor::computeBranchLength(nodeptr node) const {
+double Predictor::computeBranchLength(const nodeptr node) const {
 	double branchLength = 0.0;
-	if (partitions->numberOfPartitions > 1) {
+	if (_pllPartitions->numberOfPartitions > 1) {
 		/* compute the branch length as the average over all other partitions */
-		for (int i = 0; i < partitions->numberOfPartitions; i++) {
-			if (partitionNumber != i) {
-				branchLength += pllGetBranchLength(tree, node, i);
+		for (int i = 0; i < _pllPartitions->numberOfPartitions; i++) {
+			if (_partitionNumber != i) {
+				branchLength += pllGetBranchLength(_pllTree, node, i);
 			}
 		}
-		branchLength /= (partitions->numberOfPartitions - 1);
+		branchLength /= (_pllPartitions->numberOfPartitions - 1);
 	} else {
 		/* return the current and only branch length */
-		branchLength = pllGetBranchLength(tree, node,
-				partitionNumber);
+		branchLength = pllGetBranchLength(_pllTree, node,
+				_partitionNumber);
 	}
 	return branchLength;
 }
 
-void Predictor::evolveNode(nodeptr node, char * ancestralSequence) {
+void Predictor::evolveNode(const nodeptr node, const char * ancestralSequence) {
 
 #ifdef PRINT_TRACE
 	cout << "TRACE: Mutating node " << node->number << endl;
@@ -215,12 +206,12 @@ void Predictor::evolveNode(nodeptr node, char * ancestralSequence) {
 #endif
 
 	double branchLength = computeBranchLength(node);
-	cout << "  - Estimated branch length for node " << node->number << " (partition " << partitions->partitionData[partitionNumber]->partitionName << ") = " << branchLength << endl;
+	cout << "  - Estimated branch length for node " << node->number << " (partition " << _pllPartitions->partitionData[_partitionNumber]->partitionName << ") = " << branchLength << endl;
 
 	char * currentSequence = (char *) malloc(strlen(ancestralSequence) + 1);
 	mutateSequence(currentSequence, ancestralSequence, branchLength);
 
-	if (node->number > tree->mxtips) {
+	if (node->number > _pllTree->mxtips) {
 #ifdef PRINT_TRACE
 		cout << "TRACE: Recurse for Mutating node " << node->next->back->number
 				<< " and " << node->next->next->back->number << endl;
@@ -229,9 +220,9 @@ void Predictor::evolveNode(nodeptr node, char * ancestralSequence) {
 		evolveNode(node->next->next->back, currentSequence);
 	} else {
 		/* set the new sequence */
-		memcpy(&(phylip->sequenceData[node->number][start]), currentSequence, partitionLength);
+		memcpy(&(_pllAlignment->sequenceData[node->number][_start]), currentSequence, _partitionLength);
 		/* remove visited taxon */
-		missingSequences.erase(remove(missingSequences.begin(), missingSequences.end(), node->number), missingSequences.end());
+		_missingSequences.erase(remove(_missingSequences.begin(), _missingSequences.end(), node->number), _missingSequences.end());
 	}
 	free(currentSequence);
 }
@@ -239,13 +230,13 @@ void Predictor::evolveNode(nodeptr node, char * ancestralSequence) {
 void Predictor::predictMissingSequences( void ) {
 
 #ifdef PRINT_TRACE
-	for (size_t i = 0; i < missingSequences.size(); i++) {
-		cout << "TRACE: Missing sequence " << missingSequences[i] << endl;
+	for (size_t i = 0; i < _missingSequences.size(); i++) {
+		cout << "TRACE: Missing sequence " << _missingSequences[i] << endl;
 	}
 #endif
 
 	/* loop over all possible subtrees with missing data */
-	while (missingSequences.size()) {
+	while (_missingSequences.size()) {
 		cout << "Predicting subtree" << endl;
 		nodeptr ancestor = findMissingDataAncestor();
 
@@ -254,26 +245,26 @@ void Predictor::predictMissingSequences( void ) {
 	#ifdef PRINT_TRACE
 		cout << "TRACE: Updating partials for " << startNode->number << endl;
 	#endif
-		pllUpdatePartialsAncestral(tree, partitions, startNode);
+		pllUpdatePartialsAncestral(_pllTree, _pllPartitions, startNode);
 	#ifdef PRINT_TRACE
 		cout << "TRACE: Generating ancestral for " << startNode->number << endl;
 	#endif
 
-		char * ancestral = (char *) malloc(sequenceLength + 1);
+		char * ancestral = (char *) malloc( (size_t) sequenceLength + 1);
 		double * probs = (double *) malloc(
-				sequenceLength * numStates * sizeof(double));
-		pllGetAncestralState(tree, partitions, startNode, probs, ancestral);
+				(size_t) sequenceLength * numberOfStates * sizeof(double));
+		pllGetAncestralState(_pllTree, _pllPartitions, startNode, probs, ancestral);
 		free (probs);
 
 		/* extract the ancestral for the partition */
-		char * partAncestral = (char *) malloc(partitionLength + 1);
-		memcpy(partAncestral, &(ancestral[start]), partitionLength);
-		partAncestral[partitionLength] = '\0';
+		char * partAncestral = (char *) malloc(_partitionLength + 1);
+		memcpy(partAncestral, &(ancestral[_start]), _partitionLength);
+		partAncestral[_partitionLength] = '\0';
 		free (ancestral);
 
 	#ifdef DEBUG
-		printNodes(tree, partitions);
-		printBranchLengths(tree, partitions);
+		printNodes(_pllTree, _pllPartitions);
+		printBranchLengths(_pllTree, _pllPartitions);
 	#endif
 
 		evolveNode(ancestor->back, partAncestral);
