@@ -69,15 +69,8 @@ void exit_with_usage(char * command) {
 	printf("\n");
 	printf("Usage:\n");
 	printf(
-			"  %s -i inputFileName -t treeFileName [-q partitionsFileName] [-s seed] [-o outputFileName]\n",
+			"  %s -i inputFileName -t treeFileName [-q partitionsFileName] [-s seed] [-o outputFileName]",
 			command);
-	printf("\n");
-	printf(
-			"  -d, --datatype   dataType            Set the data type (default: nucleic)");
-	printf("\n");
-	printf("      --datatype   nt                  Nucleic");
-	printf("\n");
-	printf("      --datatype   aa                  Proteic");
 	printf("\n\n");
 	printf("  -h, --help                           Shows this help message");
 	printf("\n\n");
@@ -85,18 +78,15 @@ void exit_with_usage(char * command) {
 			"  -i, --input      inputFileName       Set the input alignment (mandatory)");
 	printf("\n\n");
 	printf(
-			"  -m, --model      substitution model  Set the substitution model (only for protein data)");
-	printf("\n");
-	printf(
-			"                                       DAYHOFF, DCMUT, JTT, JTTDCMUT, MTREV, WAG, RTREV, CPREV, VT,\n");
-	printf(
-			"                                       BLOSUM62, MTMAM, LG, MTART, MTZOA, PMB, HIVB, HIVW, FLU");
-	printf("\n\n");
-	printf(
 			"  -o, --output     outputFileName      Set the output filename (default: [inputFile].predicted)");
 	printf("\n\n");
 	printf(
-			"  -q, --partitions partitionsFileName  Set the partitions definition");
+			"  -q, --partitions partitionsFileName  Set the partitions definition (PLL like)");
+	printf("\n\n");
+	printf(
+			"                   If no partitions file is set, one single partition and DNA data is assumed\n");
+	printf(
+				"                   and branch lengths are taken directly from the input tree.");
 	printf("\n\n");
 	printf(
 			"  -s, --seed       randomNumberSed     Set a custom seed (default: 12345)");
@@ -119,16 +109,11 @@ int main(int argc, char * argv[]) {
 	partitionList * pllPartitions = 0;
 	pllAlignmentData * pllAlignment = 0;
 	string inputfile, treefile, partitionsfile, outputfile;
-	string protModelString;
 	int randomNumberSeed = 12345;
-
-	bool setDataType = false;
 
 	static struct option long_options[] = {
 			{ "help", no_argument, 0, 'h' },
-			{ "datatype", required_argument, 0, 'd' },
 			{ "input", required_argument, 0, 'i' },
-			{ "model", required_argument, 0, 'm' },
 			{ "tree", required_argument, 0, 't' },
 			{ "partitions", required_argument, 0, 'q' },
 			{ "seed", required_argument, 0, 's' },
@@ -136,48 +121,15 @@ int main(int argc, char * argv[]) {
 			{ 0, 0, 0, 0 } };
 
 	int opt = 0, long_index = 0;
-	while ((opt = getopt_long(argc, argv, "hd:i:m:t:q:s:o:", long_options,
+	while ((opt = getopt_long(argc, argv, "hi:t:q:s:o:", long_options,
 			&long_index)) != -1) {
 		switch (opt) {
-		case 'd':
-			if (!strcmp(optarg, "nt")) {
-				if ( seqpred::protModel > -1) {
-					cerr << "Error: You cannot specify a protein model and a nucleotide datatype" << endl;
-					exit(EX_IOERR);
-				}
-				seqpred::dataType = seqpred::DT_NUCLEIC;
-			} else if (!strcmp(optarg, "aa")) {
-				seqpred::dataType = seqpred::DT_PROTEIC;
-			} else {
-				cerr << "Error: Data type must be 'nt' (nucleotide) of 'aa' (amino acid)" << endl;
-				exit(EX_IOERR);
-			}
-			setDataType = true;
-			break;
 		case 'h':
 			exit_with_usage(argv[0]);
 			break;
 		case 'i':
 			inputfile = optarg;
 			break;
-		case 'm':
-		{
-			if ( setDataType && seqpred::dataType == seqpred::DT_NUCLEIC ) {
-				cerr << "Error: You cannot specify a protein model and a nucleotide datatype" << endl;
-				exit(EX_IOERR);
-			}
-			seqpred::dataType = seqpred::DT_PROTEIC;
-			seqpred::Utils::init();
-			protModelString = optarg;
-			if (
-				seqpred::protModelsMap.find(optarg) == seqpred::protModelsMap.end()) {
-				cerr << "Error: Unrecognized protein model " << optarg << endl;
-				exit(EX_IOERR);
-			} else {
-				seqpred::protModel = seqpred::protModelsMap[optarg];
-			}
-			break;
-		}
 		case 't':
 			treefile = optarg;
 			break;
@@ -234,7 +186,7 @@ int main(int argc, char * argv[]) {
 		exit(EX_IOERR);
 	}
 
-	if (partitionsFileDefined && !seqpred::Utils::existsFile(treefile)) {
+	if (partitionsFileDefined && !seqpred::Utils::existsFile(partitionsfile)) {
 		cerr << "[ERROR] Partitions file (" << partitionsfile
 				<< ") does not exist." << endl;
 		exit(EX_IOERR);
@@ -249,6 +201,7 @@ int main(int argc, char * argv[]) {
 	seqpred::sequenceLength = pllAlignment->sequenceLength;
 
 	if (partitionsFileDefined) {
+		/* Create partitions */
 		pllPartsQueue = pllPartitionParse(partitionsfile.c_str());
 		if (!pllPartitionsValidate(pllPartsQueue, pllAlignment)) {
 			cerr
@@ -257,7 +210,8 @@ int main(int argc, char * argv[]) {
 			exit(EX_IOERR);
 		}
 	} else {
-		char partitionString[256];
+		/* Set one single partition */
+		char partitionString[20];
 		sprintf(partitionString, "DNA, P0 = 1-%d",
 				pllAlignment->sequenceLength);
 		pllPartsQueue = pllPartitionParseString(partitionString);
@@ -273,7 +227,7 @@ int main(int argc, char * argv[]) {
 	} else if (seqpred::numberOfStates== 20) {
 		seqpred::dataType = seqpred::DT_PROTEIC;
 	} else {
-		cerr << "Error: Weird number of states " << seqpred::numberOfStates << endl;
+		cerr << "[ERROR] Weird number of states " << seqpred::numberOfStates << endl;
 		exit(EX_IOERR);
 	}
 
@@ -289,13 +243,10 @@ int main(int argc, char * argv[]) {
 				"         No branch lengths will be estimated." << endl <<
 				"*********************************************" << endl;
 	}
-#ifdef PRINT_TRACE
-	cout << " Make Tree " << endl;
-#endif
+
 	pllTreeInitTopologyRandom(pllTree, seqpred::numberOfTaxa,
 			pllAlignment->sequenceLabels);
 
-	/* NOTE: We need to initialize the model first. Otherwise fracchange (average subst rate) is 0 */
 	cout << endl << "Loading alignment " << endl;
 	pllLoadAlignment(pllTree, pllAlignment, pllPartitions);
 	seqpred::taxaNames = pllTree->nameList;
@@ -306,10 +257,10 @@ int main(int argc, char * argv[]) {
 	pllNewickTree * nt;
 	nt = pllNewickParseFile(treefile.c_str());
 	if (!nt) {
-		cerr << "Error while parsing newick file " << argv[2] << endl;
+		cerr << "[ERROR] There was an error parsing newick file " << treefile << endl;
 		return (EXIT_FAILURE);
 	}
-	if (!pllValidateNewick(nt)) /* check whether the valid newick tree is also a tree that can be processed with our nodeptr structure */
+	if (!pllValidateNewick(nt))
 	{
 		cerr << "Invalid phylogenetic tree" << endl;
 		printf("%d\n", errno);
@@ -322,10 +273,6 @@ int main(int argc, char * argv[]) {
 	pllNewickParseDestroy(&nt);
 
 	pllEvaluateLikelihood(pllTree, pllPartitions, pllTree->start, true, false);
-//	pllTreeToNewick(pllTree->tree_string, pllTree, pllPartitions,
-//			pllTree->start->back, true, true, false, false, false,
-//			PLL_SUMMARIZE_LH, false, false);
-//	cout << "Tree: " << pllTree->tree_string << endl;
 
 #ifdef PRINT_TRACE
 	cout << "TRACE: Initial log likelihood: " << pllTree->likelihood << endl;
@@ -333,20 +280,12 @@ int main(int argc, char * argv[]) {
 
 	cout << "Optimizing per-gene branch lengths " << endl;
 	optimizeModelParameters(pllTree, pllPartitions);
-//	pllOptimizeModelParameters(pllTree, pllPartitions, 0.1);
-
-//	pllEvaluateLikelihood(pllTree, pllPartitions, pllTree->start, true, false);
-//	pllTreeToNewick(pllTree->tree_string, pllTree, pllPartitions,
-//			pllTree->start->back, true, true, false, false, false,
-//			PLL_SUMMARIZE_LH, false, false);
-//	cout << "Tree: " << pllTree->tree_string << endl;
 
 #ifdef PRINT_TRACE
 	cout << "TRACE: Tree=" << pllTree->tree_string << endl;
 #endif
 
 	cout << "Predicting sequences..." << endl << endl;
-	seqpred::Utils::init();
 	for (int currentPartition = 0;
 			currentPartition < pllPartitions->numberOfPartitions;
 			currentPartition++) {

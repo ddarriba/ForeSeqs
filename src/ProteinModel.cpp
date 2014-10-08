@@ -65,7 +65,7 @@ ProteinModel::ProteinModel(partitionList * pllPartitions, int partitionIndex) :
 }
 
 ProteinModel::~ProteinModel() {
-	// TODO Auto-generated destructor stub
+	/* do nothing */
 }
 
 void ProteinModel::SetupGTR() {

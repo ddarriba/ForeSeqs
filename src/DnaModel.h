@@ -23,7 +23,12 @@ public:
 	virtual char getState(double * Pmatrix) const;
 	virtual ~DnaModel();
 private:
+
+	/**
+	 * @brief Setup the Q matrix
+	 */
 	void SetupGTR();
+
 	double Cijk[CUNUM_NUC];
 	double Root[NUM_NUC];
 };

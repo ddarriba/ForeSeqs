@@ -70,10 +70,6 @@ public:
 	 */
 	static bool floatEquals(double v1, double v2);
 
-	/**
-	 * @brief Initialize states conversion map
-	 */
-	static void init(void);
 };
 
 enum DataType { DT_NUCLEIC, DT_PROTEIC};	/** Data Type definition (nucleic or proteic) */
@@ -84,11 +80,6 @@ extern int numberOfStates;					/** Number of different states (4 for DNA, 20 for
 extern int numberOfTaxa;					/* Number of taxa */
 extern int sequenceLength;					/* Number of sites (aa/bp) */
 extern char ** taxaNames;					/* Name list of taxa */
-
-extern std::map<std::string, int> protModelsMap;
-extern int protModel;
-
-extern bool initialized;					/* Flag to check whether init was called */
 
 } /* namespace seqpred */
 

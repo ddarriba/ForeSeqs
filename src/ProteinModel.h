@@ -25,7 +25,12 @@ public:
 	virtual char getState(double * Pmatrix) const;
 	virtual ~ProteinModel();
 private:
+
+	/**
+	 * @brief Setup the Q matrix
+	 */
 	void SetupGTR();
+
 	double Cijk[CUNUM_AA];
 	double Root[NUM_AA];
 };

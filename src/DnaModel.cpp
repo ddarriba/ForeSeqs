@@ -40,6 +40,10 @@ DnaModel::DnaModel(partitionList * pllPartitions, int partitionIndex) :
 	SetupGTR();
 }
 
+DnaModel::~DnaModel() {
+	/* do nothing */
+}
+
 char DnaModel::getState(double * P) const {
 	int j;
 	double r = Utils::genRand();
@@ -107,10 +111,6 @@ void DnaModel::setMatrix(double * matrix, double branchLength) const {
 		assert(Utils::floatEquals(matrix[NUM_NUC * (i + 1) - 1], 1.0));
 	}
 
-}
-
-DnaModel::~DnaModel() {
-	// TODO Auto-generated destructor stub
 }
 
 } /* namespace seqpred */
