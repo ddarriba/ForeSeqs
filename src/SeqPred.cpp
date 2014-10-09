@@ -218,24 +218,6 @@ int main(int argc, char * argv[]) {
 	pllPartitions = pllPartitionsCommit(pllPartsQueue, pllAlignment);
 	pllQueuePartitionsDestroy(&pllPartsQueue);
 
-	seqpred::numberOfStates = pllPartitions->partitionData[0]->states;
-	if (seqpred::numberOfStates == 4) {
-		seqpred::dataType = seqpred::DT_NUCLEIC;
-	} else if (seqpred::numberOfStates== 20) {
-		seqpred::dataType = seqpred::DT_PROTEIC;
-	} else {
-		cerr << "[ERROR] Weird number of states " << seqpred::numberOfStates << endl;
-		exit(EX_IOERR);
-	}
-	for (int i=0; i<pllPartitions->numberOfPartitions; i++) {
-		if (pllPartitions->partitionData[i]->states != seqpred::numberOfStates) {
-			cerr << "[ERROR] There are partitions with a different number of states:" << endl;
-			cerr << "        Partition " << pllPartitions->partitionData[0]->partitionName << " : " << pllPartitions->partitionData[0]->states << " states. "<< endl;
-			cerr << "        Partition " << pllPartitions->partitionData[i]->partitionName << " : " << pllPartitions->partitionData[i]->states << " states. "<< endl;
-			exit(EX_IOERR);
-		}
-	}
-
 	if (!pllPartitions) {
 		cerr << "[ERROR] There was an error parsing partitions data." << endl;
 		exit(EX_IOERR);

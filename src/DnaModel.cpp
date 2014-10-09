@@ -21,7 +21,6 @@ DnaModel::DnaModel(partitionList * pllPartitions, int partitionIndex) :
 		Model(pllPartitions, partitionIndex) {
 
 	assert (_pllPartitionInfo->states == NUM_NUC);
-	assert (numberOfStates == NUM_NUC);
 
 	int numFreqs = NUM_NUC;
 	int numRates = (NUM_NUC - 1) * NUM_NUC / 2;

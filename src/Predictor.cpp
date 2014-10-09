@@ -24,10 +24,12 @@ Predictor::Predictor(pllInstance * tree, partitionList * partitions,
 		_pllTree(tree), _pllPartitions(partitions), _pllAlignment(phylip), _partitionNumber(
 				partitionNumber) {
 
-	if (dataType == DT_NUCLEIC) {
+	if (Utils::getDataType(partitions, partitionNumber) == DT_NUCLEIC) {
 		_currentModel = new DnaModel(partitions, partitionNumber);
+		_numberOfStates = 4;
 	} else {
 		_currentModel = new ProteinModel(partitions, partitionNumber);
+		_numberOfStates = 20;
 	}
 
 	/* get information from the partition */
@@ -47,7 +49,7 @@ Predictor::~Predictor( void ) {
 vector<int> Predictor::findMissingSequences( void ) const {
 	vector<int> missingSeqs;
 
-	unsigned char undefinedSite = (numberOfStates==4)?15:22;
+	unsigned char undefinedSite = (_numberOfStates==4)?15:22;
 	int missing;
 	for (int i = 1; i <= _pllTree->ntips; i++) {
 		missing = 1;
@@ -143,12 +145,12 @@ void Predictor::mutateSequence(char * currentSequence,
 	char * seqPtr = currentSequence;
 
 	/* construct P matrix */
-	double matrix[numberOfRateCategories][numberOfStates*numberOfStates];
+	double matrix[numberOfRateCategories][_numberOfStates*_numberOfStates];
 	for (int i = 0; i < numberOfRateCategories; i++) {
 		_currentModel->setMatrix(matrix[i], gammaRates[i] * branchLength);
 	}
 	for (unsigned int i = 0; i < _partitionLength; i++) {
-		*seqPtr = _currentModel->getState(matrix[*siteCatPtr]+(_currentModel->getStateIndex(*seqPtr) * numberOfStates));
+		*seqPtr = _currentModel->getState(matrix[*siteCatPtr]+(_currentModel->getStateIndex(*seqPtr) * _numberOfStates));
 		seqPtr++;
 		siteCatPtr++;
 	}
@@ -250,9 +252,19 @@ void Predictor::predictMissingSequences( void ) {
 		cout << "TRACE: Generating ancestral for " << startNode->number << endl;
 	#endif
 
+		/*
+		 * Compute probs size according to the maximum number of states.
+		 * This is necessary in case there are mixed protein-dna partitions.
+		 */
+		int probsSize = 0;
+		for (int i=0; i<_pllPartitions->numberOfPartitions; i++) {
+			probsSize = max(_pllPartitions->partitionData[i]->states, probsSize);
+		}
+		probsSize *= sequenceLength;
+
 		char * ancestral = (char *) malloc( (size_t) sequenceLength + 1);
 		double * probs = (double *) malloc(
-				(size_t) sequenceLength * numberOfStates * sizeof(double));
+				(size_t) probsSize * sizeof(double));
 		pllGetAncestralState(_pllTree, _pllPartitions, startNode, probs, ancestral);
 		free (probs);
 

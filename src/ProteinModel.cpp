@@ -24,7 +24,6 @@ ProteinModel::ProteinModel(partitionList * pllPartitions, int partitionIndex) :
 		Model(pllPartitions, partitionIndex) {
 
 	assert(_pllPartitionInfo->states == NUM_AA);
-	assert(numberOfStates == NUM_AA);
 
 	int numFreqs = NUM_AA;
 	int numRates = (NUM_AA - 1) * NUM_AA / 2;

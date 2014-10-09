@@ -11,17 +11,13 @@
 #include <cstdlib>
 #include <cstring>
 #include <cmath>
-#include "pll.h"
 
 using namespace std;
 
 namespace seqpred {
 
-DataType dataType = DT_NUCLEIC;
-
 /* Number of categories hardcoded to 4 */
 int numberOfRateCategories = 4;
-int numberOfStates;
 int numberOfTaxa, sequenceLength;
 char ** taxaNames;
 
@@ -46,6 +42,20 @@ void Utils::printVector(const double * vec, int len) {
 
 bool Utils::floatEquals(double v1, double v2) {
 	return (std::abs(v1 - v2) <= EPSILON);
+}
+
+DataType Utils::getDataType(const partitionList * pllPartitions, int numberOfPartition) {
+	switch (pllPartitions->partitionData[numberOfPartition]->states) {
+	case 4:
+		return DT_NUCLEIC;
+	case 20:
+		return DT_PROTEIC;
+	default:
+		cerr << "[ERROR] Invalid number of states (" <<
+		pllPartitions->partitionData[numberOfPartition]->states
+		<< ") for partition " << numberOfPartition << endl;
+		exit(EX_IOERR);
+	}
 }
 
 } /* namespace seqpred */

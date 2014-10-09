@@ -8,6 +8,8 @@
 #ifndef UTILS_H_
 #define UTILS_H_
 
+#include "pll.h"
+
 #include <vector>
 #include <iostream>
 #include <cstdio>
@@ -72,10 +74,17 @@ public:
 	 */
 	static bool floatEquals(double v1, double v2);
 
+	/**
+	 * @brief Gets the data type (NT or AA) according to the number of states
+	 *
+	 * @param[in] pllPartitions The PLL partition list
+	 * @param numberOfPartition The number of partition for checking the data type
+	 *
+	 * @return the data type (DT_NUCLEIC or DT_PROTEIC)
+	 */
+	static DataType getDataType(const partitionList * pllPartitions, int numberOfPartition);
 };
 
-extern DataType dataType;					/** Current data type */
-extern int numberOfStates;					/** Number of different states (4 for DNA, 20 for Proteins) */
 extern int numberOfRateCategories;			/** Number of gamma rate categories */
 extern int numberOfTaxa;					/* Number of taxa */
 extern int sequenceLength;					/* Number of sites (aa/bp) */

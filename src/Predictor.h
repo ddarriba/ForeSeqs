@@ -74,6 +74,7 @@ private:
 	partitionList * _pllPartitions;		/** PLL list of partitions */
 	pllAlignmentData * _pllAlignment;	/** PLL alignment data */
 	int _partitionNumber;				/** Partition for predicting the sequences */
+	int _numberOfStates;
 	unsigned int _start;				/** Starting position of the partition */
 	unsigned int _end; 					/** Ending position of the partition */
 	unsigned int _partitionLength;		/** Number of sites (length) of the partition */

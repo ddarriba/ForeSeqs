@@ -24,6 +24,7 @@ Model::~Model() {
 
 double Model::computeFracchange( void ) const {
 
+	int numberOfStates = _pllPartitionInfo->states;
 	assert ((unsigned int)numberOfStates == _frequencies.size());
 	assert ((unsigned int) (numberOfStates * (numberOfStates-1))/2 == _substRates.size());
 
