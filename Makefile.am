@@ -10,4 +10,4 @@
 
 # EXTRA_DIST = reconf configure
 EXTRA_DIST = configure
-SUBDIRS = m4 src 
+SUBDIRS = src 

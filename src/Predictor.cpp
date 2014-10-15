@@ -40,10 +40,29 @@ Predictor::Predictor(pllInstance * tree, partitionList * partitions,
 	/* get taxa with missing data in the partition */
 	_missingSequences = findMissingSequences();
 
+	_catToSite = 0;
+	if (_missingSequences.size()) {
+		if (categoriesMode != CAT_AVERAGE) {
+			_catToSite = (short *) malloc((size_t) _partitionLength * sizeof(short));
+			if (categoriesMode == CAT_RANDOM) {
+				/* random assignment of sites to categories */
+				for (unsigned int i = 0; i < _partitionLength; i++) {
+					_catToSite[i] = (short) (numberOfRateCategories * Utils::genRand());
+				}
+			} else {
+				/* TODO: Compute per-site categories */
+				cerr << "Categories mode not available." << endl;
+				exit(EX_UNIMPLEMENTED);
+			}
+		}
+	}
 }
 
 Predictor::~Predictor( void ) {
 	delete _currentModel;
+	if (_catToSite) {
+		free(_catToSite);
+	}
 }
 
 vector<int> Predictor::findMissingSequences( void ) const {
@@ -135,24 +154,56 @@ void Predictor::mutateSequence(char * currentSequence,
 	double gammaRates[numberOfRateCategories];
 	pllMakeGammaCats(_pllPartitions->partitionData[_partitionNumber]->alpha,gammaRates, numberOfRateCategories, false);
 
-	/* random assignment of sites to categories */
-	short categories[_partitionLength];
-	for (unsigned int i=0; i<_partitionLength; i++) {
-		categories[i]=(int)(numberOfRateCategories * Utils::genRand());
-	}
-
-	short * siteCatPtr = categories;
 	char * seqPtr = currentSequence;
 
-	/* construct P matrix */
+	/* construct and validate P matrix */
 	double matrix[numberOfRateCategories][_numberOfStates*_numberOfStates];
 	for (int i = 0; i < numberOfRateCategories; i++) {
 		_currentModel->setMatrix(matrix[i], gammaRates[i] * branchLength);
+		for (int j = 0; j < _numberOfStates; j++) {
+			assert(Utils::floatEquals(matrix[i][j*_numberOfStates + _numberOfStates - 1], 1.0));
+		}
 	}
-	for (unsigned int i = 0; i < _partitionLength; i++) {
-		*seqPtr = _currentModel->getState(matrix[*siteCatPtr]+(_currentModel->getStateIndex(*seqPtr) * _numberOfStates));
-		seqPtr++;
-		siteCatPtr++;
+
+	switch (categoriesMode) {
+	case CAT_AVERAGE:
+	{
+		double averageMatrix[_numberOfStates * _numberOfStates];
+		for (int i = 0; i < _numberOfStates * _numberOfStates; i++) {
+			averageMatrix[i] = 0.0;
+			for (int j = 0; j < numberOfRateCategories; j++) {
+				averageMatrix[i] += matrix[j][i];
+			}
+			averageMatrix[i] /= numberOfRateCategories;
+			if (!((i+1) % _numberOfStates)) {
+				assert(Utils::floatEquals(averageMatrix[i], 1.0));
+			} else {
+				assert(averageMatrix[i] < 1.0);
+			}
+		}
+		for (unsigned int i = 0; i < _partitionLength; i++) {
+			*seqPtr = _currentModel->getState(
+					averageMatrix
+							+ (_currentModel->getStateIndex(*seqPtr)
+									* _numberOfStates));
+			seqPtr++;
+		}
+		break;
+	}
+	case CAT_RANDOM:
+	case CAT_ESTIMATE:
+	{
+		short * siteCatPtr = _catToSite;
+		for (unsigned int i = 0; i < _partitionLength; i++) {
+			*seqPtr = _currentModel->getState(
+					matrix[*siteCatPtr]
+							+ (_currentModel->getStateIndex(*seqPtr)
+									* _numberOfStates));
+			seqPtr++;
+			siteCatPtr++;
+		}
+		break;
+	}
 	}
 }
 

@@ -4,6 +4,7 @@
 
 #include <iostream>
 #include <cstdlib>
+#include <cstring>
 #include <cmath>
 #include <cassert>
 #include <getopt.h>
@@ -69,6 +70,11 @@ void exit_with_usage(char * command) {
 			"  %s -i inputFileName -t treeFileName [-q partitionsFileName] [-s seed] [-o outputFileName]",
 			command);
 	printf("\n\n");
+	printf("  -c, --categories  categoriesMode    Set the mode for selecting the per-site category (default: r)\n");
+	printf("      --categories  r (random)        Random per-site category for each sequence\n");
+	printf("      --categories  e (estimate)      Estimated from other partitions\n");
+	printf("      --categories  a (average)       Average of all categories\n");
+	printf("\n\n");
 	printf("  -h, --help                           Shows this help message");
 	printf("\n\n");
 	printf(
@@ -109,6 +115,7 @@ int main(int argc, char * argv[]) {
 	int randomNumberSeed = 12345;
 
 	static struct option long_options[] = {
+			{ "categories", required_argument, 0, 'c' },
 			{ "help", no_argument, 0, 'h' },
 			{ "input", required_argument, 0, 'i' },
 			{ "tree", required_argument, 0, 't' },
@@ -118,9 +125,32 @@ int main(int argc, char * argv[]) {
 			{ 0, 0, 0, 0 } };
 
 	int opt = 0, long_index = 0;
-	while ((opt = getopt_long(argc, argv, "hi:t:q:s:o:", long_options,
+	while ((opt = getopt_long(argc, argv, "c:hi:t:q:s:o:", long_options,
 			&long_index)) != -1) {
 		switch (opt) {
+		case 'c':
+		{
+			if (strlen(optarg) > 1) {
+				cerr << "[ERROR] Invalid categories mode: " << optarg << endl;
+				exit(EX_IOERR);
+			}
+			char catMode = optarg[0];
+			switch(catMode) {
+			case 'r':
+				seqpred::categoriesMode = seqpred::CAT_RANDOM;
+				break;
+			case 'e':
+				seqpred::categoriesMode = seqpred::CAT_ESTIMATE;
+				break;
+			case 'a':
+				seqpred::categoriesMode = seqpred::CAT_AVERAGE;
+				break;
+			default:
+				cerr << "[ERROR] Invalid categories mode: " << optarg << endl;
+				exit(EX_IOERR);
+			}
+			break;
+		}
 		case 'h':
 			exit_with_usage(argv[0]);
 			break;

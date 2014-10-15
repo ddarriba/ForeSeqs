@@ -23,7 +23,14 @@
 
 namespace seqpred {
 
-enum DataType { DT_NUCLEIC, DT_PROTEIC};	/** Data Type definition (nucleic or proteic) */
+/** Data Type definition (nucleic or proteic) */
+enum DataType { DT_NUCLEIC, DT_PROTEIC};
+/** Mode for selecting per-site rate categories */
+enum CatMode {
+	CAT_RANDOM,		/** Random per-site category */
+	CAT_ESTIMATE,	/** Estimated from other partitions */
+	CAT_AVERAGE		/** Average of all categories */
+	};
 
 class Utils {
 public:
@@ -85,6 +92,7 @@ public:
 	static DataType getDataType(const partitionList * pllPartitions, int numberOfPartition);
 };
 
+extern CatMode categoriesMode;				/** Mode for selecting per-site rate categories */
 extern int numberOfRateCategories;			/** Number of gamma rate categories */
 extern int numberOfTaxa;					/* Number of taxa */
 extern int sequenceLength;					/* Number of sites (aa/bp) */

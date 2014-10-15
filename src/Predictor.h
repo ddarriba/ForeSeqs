@@ -73,11 +73,14 @@ private:
 	pllInstance * _pllTree;				/** PLL instance */
 	partitionList * _pllPartitions;		/** PLL list of partitions */
 	pllAlignmentData * _pllAlignment;	/** PLL alignment data */
-	int _partitionNumber;				/** Partition for predicting the sequences */
-	int _numberOfStates;
-	unsigned int _start;				/** Starting position of the partition */
-	unsigned int _end; 					/** Ending position of the partition */
-	unsigned int _partitionLength;		/** Number of sites (length) of the partition */
+
+	int _partitionNumber;			/** Partition for predicting the sequences */
+	int _numberOfStates;			/** Number of different states (4 for NT, 20 for AA) */
+	unsigned int _start;			/** Starting position of the partition */
+	unsigned int _end; 				/** Ending position of the partition */
+	unsigned int _partitionLength;	/** Number of sites (length) of the partition */
+	short * _catToSite;				/** Assignment of categories to sites */
+
 	std::vector<int> _missingSequences;	/** Vector of taxa with missing sequences */
 	Model * _currentModel;				/** Model for computing the P matrix */
 };
