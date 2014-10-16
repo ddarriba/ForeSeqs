@@ -11,6 +11,7 @@
 #include "Utils.h"
 
 #include <iostream>
+#include <iomanip>
 #include <algorithm>
 #include <cstring>
 #include <cassert>
@@ -138,6 +139,10 @@ nodeptr Predictor::findMissingDataAncestor( void ) const {
 void Predictor::mutateSequence(char * currentSequence,
 		const char * ancestralSequence, double branchLength) {
 
+	char * seqPtr;
+	double gammaRates[numberOfRateCategories];
+	int substitutionsCount = 0;
+
 	if ( _partitionLength != strlen(ancestralSequence) ) {
 		cerr << "ERROR: Length of ancestral sequence (" << strlen(ancestralSequence)
 				<< ") differ from the expected length (" << _partitionLength << ")" << endl;
@@ -151,10 +156,9 @@ void Predictor::mutateSequence(char * currentSequence,
 	/* start mutating the ancestral sequence */
 	strcpy(currentSequence, ancestralSequence);
 
-	double gammaRates[numberOfRateCategories];
 	pllMakeGammaCats(_pllPartitions->partitionData[_partitionNumber]->alpha,gammaRates, numberOfRateCategories, false);
 
-	char * seqPtr = currentSequence;
+	seqPtr = currentSequence;
 
 	/* construct and validate P matrix */
 	double matrix[numberOfRateCategories][_numberOfStates*_numberOfStates];
@@ -181,11 +185,14 @@ void Predictor::mutateSequence(char * currentSequence,
 				assert(averageMatrix[i] < 1.0);
 			}
 		}
+
 		for (unsigned int i = 0; i < _partitionLength; i++) {
-			*seqPtr = _currentModel->getState(
+			char newState = _currentModel->getState(
 					averageMatrix
 							+ (_currentModel->getStateIndex(*seqPtr)
 									* _numberOfStates));
+			if (*seqPtr != newState) substitutionsCount++;
+			*seqPtr = newState;
 			seqPtr++;
 		}
 		break;
@@ -195,16 +202,19 @@ void Predictor::mutateSequence(char * currentSequence,
 	{
 		short * siteCatPtr = _catToSite;
 		for (unsigned int i = 0; i < _partitionLength; i++) {
-			*seqPtr = _currentModel->getState(
+			char newState = _currentModel->getState(
 					matrix[*siteCatPtr]
 							+ (_currentModel->getStateIndex(*seqPtr)
 									* _numberOfStates));
+			if (*seqPtr != newState) substitutionsCount++;
+				*seqPtr = newState;
 			seqPtr++;
 			siteCatPtr++;
 		}
 		break;
 	}
 	}
+	cout << "    - Substitutions from ancestral = " << setprecision(3) << (double)substitutionsCount/_partitionLength << "%" << endl;
 }
 
 #ifdef DEBUG
@@ -259,7 +269,7 @@ void Predictor::evolveNode(const nodeptr node, const char * ancestralSequence) {
 #endif
 
 	double branchLength = computeBranchLength(node);
-	cout << "  - Estimated branch length for node " << node->number << " (partition " << _pllPartitions->partitionData[_partitionNumber]->partitionName << ") = " << branchLength << endl;
+	cout << "  - Estimated branch length for node " << setprecision(5) << node->number << " (partition " << _pllPartitions->partitionData[_partitionNumber]->partitionName << ") = " << branchLength << endl;
 
 	char * currentSequence = (char *) malloc(strlen(ancestralSequence) + 1);
 	mutateSequence(currentSequence, ancestralSequence, branchLength);

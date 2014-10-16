@@ -15,11 +15,12 @@
 #include <cstdio>
 #include <map>
 
-#define EPSILON 1e-6		/** epsilon for comparing floating point values */
+#define SEQPRED_VERSION "0.1" /** software version */
+#define EPSILON 1e-6		  /** epsilon for comparing floating point values */
 
-#define EX_OK EXIT_SUCCESS	/** exit correctly */
-#define EX_UNIMPLEMENTED 1	/** exit due to an unimplemented feature */
-#define EX_IOERR 2			/** exit due to an input/output error */
+#define EX_OK EXIT_SUCCESS	  /** exit correctly */
+#define EX_UNIMPLEMENTED 1	  /** exit due to an unimplemented feature */
+#define EX_IOERR 2			  /** exit due to an input/output error */
 
 namespace seqpred {
 

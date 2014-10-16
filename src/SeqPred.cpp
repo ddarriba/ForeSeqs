@@ -3,6 +3,7 @@
 #include "pll.h"
 
 #include <iostream>
+#include <iomanip>
 #include <cstdlib>
 #include <cstring>
 #include <cmath>
@@ -21,6 +22,8 @@ void optimizeModelParameters(pllInstance * pllTree,
 		/*
 		 * Optimize per-gene branch lengths.
 		 */
+		cout << "Optimizing per-gene branch lengths / model parameters " << endl;
+
 		int smoothIterations = 64;
 		do {
 			lk = pllTree->likelihood;
@@ -32,6 +35,8 @@ void optimizeModelParameters(pllInstance * pllTree,
 		 * In case there is one single partition, we do not optimize the branch lengths.
 		 * Otherwise we would have weird results in the branches with missing data.
 		 */
+		cout << "Optimizing model parameters " << endl;
+
 		pllOptRatesGeneric(pllTree, pllPartitions, 1.0,
 				pllPartitions->rateList);
 		pllEvaluateLikelihood(pllTree, pllPartitions, pllTree->start, true,
@@ -219,6 +224,10 @@ int main(int argc, char * argv[]) {
 		exit(EX_IOERR);
 	}
 
+	if (outputfile.length() == 0) {
+		outputfile = (inputfile + ".prediction");
+	}
+
 	pllAlignment = pllParseAlignmentFile(PLL_FORMAT_PHYLIP, inputfile.c_str());
 	if (!pllAlignment) {
 		cerr << "[ERROR] There was an error parsing input data." << endl;
@@ -253,13 +262,47 @@ int main(int argc, char * argv[]) {
 		exit(EX_IOERR);
 	}
 
-	if (pllPartitions->numberOfPartitions == 1) {
-		cout << endl <<
-				"*********************************************" << endl <<
-				"WARNING: There is only one partition." << endl <<
-				"         No branch lengths will be estimated." << endl <<
-				"*********************************************" << endl;
+	/* Initialization done */
+
+	/* Print header */
+
+	cout << setfill('-') << setw(60) << "" << setfill(' ') << endl;
+	char header[60];
+	sprintf(header, " Sequence predictor v%s", SEQPRED_VERSION);
+	unsigned int padding = 30 + (strlen(header) / 2);
+	cout << setw(padding) << header << endl;
+	cout << setfill('-') << setw(60) << "" << setfill(' ') << endl;
+	cout << setw(20) << left << "Input alignment:" << inputfile << endl;
+	cout << setw(20) << left << "Input tree:" << treefile << endl;
+	cout << setw(20) << left << "Partitions file:" << ((partitionsfile.length() > 0)?partitionsfile:"-") << endl;
+	cout << setw(20) << left << "Output file:" << outputfile << endl;
+	cout << setw(20) << left << "Gamma rates:";
+	switch(seqpred::categoriesMode) {
+	case seqpred::CAT_RANDOM:
+		cout<< "Random" << endl;
+		break;
+	case seqpred::CAT_AVERAGE:
+			cout<< "Average" << endl;
+			break;
+	case seqpred::CAT_ESTIMATE:
+			cout<< "Estimated" << endl;
+			break;
 	}
+	cout << setw(20) << left << "Random seed:" << randomNumberSeed << endl;
+	cout << setfill('-') << setw(60) << "" << setfill(' ') << endl;
+
+	/* Check partitions / Warn if needed */
+
+	if (pllPartitions->numberOfPartitions == 1) {
+		cout << endl << setfill('*') << setw(54) << "" << setfill(' ') << endl
+				<< "WARNING: There is only one partition." << endl
+				<< "         Branch lengths are taken from the input tree." << endl
+				<< setfill('*') << setw(54) << "" << setfill(' ') << endl;
+	} else {
+		pllPartitions->perGeneBranchLengths = true; /* IMPORTANT!! */
+	}
+
+	/* Start! */
 
 	pllTreeInitTopologyRandom(pllTree, seqpred::numberOfTaxa,
 			pllAlignment->sequenceLabels);
@@ -295,7 +338,6 @@ int main(int argc, char * argv[]) {
 	cout << "TRACE: Initial log likelihood: " << pllTree->likelihood << endl;
 #endif
 
-	cout << "Optimizing per-gene branch lengths " << endl;
 	optimizeModelParameters(pllTree, pllPartitions);
 
 #ifdef PRINT_TRACE
@@ -314,10 +356,6 @@ int main(int argc, char * argv[]) {
 #ifdef PRINT_TRACE
 	pllAlignmentDataDumpConsole(pllAlignment);
 #endif
-
-	if (outputfile.length() == 0) {
-		outputfile = (inputfile + ".prediction");
-	}
 
 	pllAlignmentDataDumpFile(pllAlignment, PLL_FORMAT_PHYLIP,
 			outputfile.c_str());
