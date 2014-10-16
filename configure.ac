@@ -9,7 +9,7 @@
 # implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 AC_INIT([seqpred],
-        [0.0.1],
+        [0.1],
         [Diego Darriba diego.darriba@h-its.org])
 AC_CONFIG_AUX_DIR(config)
 AM_CONFIG_HEADER(config.h)

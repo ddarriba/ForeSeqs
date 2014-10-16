@@ -15,7 +15,6 @@
 #include <cstdio>
 #include <map>
 
-#define SEQPRED_VERSION "0.1" /** software version */
 #define EPSILON 1e-6		  /** epsilon for comparing floating point values */
 
 #define EX_OK EXIT_SUCCESS	  /** exit correctly */

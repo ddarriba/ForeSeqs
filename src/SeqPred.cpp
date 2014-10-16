@@ -1,6 +1,8 @@
 #include "Predictor.h"
 #include "Utils.h"
+
 #include "pll.h"
+#include "config.h"
 
 #include <iostream>
 #include <iomanip>
@@ -268,7 +270,7 @@ int main(int argc, char * argv[]) {
 
 	cout << setfill('-') << setw(60) << "" << setfill(' ') << endl;
 	char header[60];
-	sprintf(header, " Sequence predictor v%s", SEQPRED_VERSION);
+	sprintf(header, " Sequence predictor v%s", PACKAGE_VERSION);
 	unsigned int padding = 30 + (strlen(header) / 2);
 	cout << setw(padding) << header << endl;
 	cout << setfill('-') << setw(60) << "" << setfill(' ') << endl;
