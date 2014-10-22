@@ -32,6 +32,11 @@ public:
 	void predictMissingSequences( void );
 
 	/**
+	 * @brief Predict all sequences one by one, for testing purposes
+	 */
+	void predictAllSequences( void );
+
+	/**
 	 * @brief Get the number of taxa with missing sequences
 	 */
 	int getNumberOfMissingSequences(void) const {

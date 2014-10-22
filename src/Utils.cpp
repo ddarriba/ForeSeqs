@@ -17,7 +17,7 @@ using namespace std;
 namespace seqpred {
 
 /* Number of categories hardcoded to 4 */
-CatMode categoriesMode = CAT_RANDOM;
+CatMode categoriesMode = CAT_ESTIMATE;
 int numberOfRateCategories = 4;
 int numberOfTaxa, sequenceLength;
 char ** taxaNames;

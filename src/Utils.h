@@ -20,6 +20,7 @@
 #define EX_OK EXIT_SUCCESS	  /** exit correctly */
 #define EX_UNIMPLEMENTED 1	  /** exit due to an unimplemented feature */
 #define EX_IOERR 2			  /** exit due to an input/output error */
+#define EX_MEMORY 3			  /** exit due to a memory allocation error */
 
 namespace seqpred {
 

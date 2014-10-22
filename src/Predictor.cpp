@@ -44,17 +44,91 @@ Predictor::Predictor(pllInstance * tree, partitionList * partitions,
 	_catToSite = 0;
 	if (_missingSequences.size()) {
 		if (categoriesMode != CAT_AVERAGE) {
-			_catToSite = (short *) malloc((size_t) _partitionLength * sizeof(short));
+			_catToSite = (short *) calloc((size_t) _partitionLength, sizeof(short));
+			unsigned int catToSiteCount[numberOfRateCategories];
+			for (int k = 0; k < numberOfRateCategories; k++) {
+				catToSiteCount[k] = 0;
+			}
 			if (categoriesMode == CAT_RANDOM) {
 				/* random assignment of sites to categories */
 				for (unsigned int i = 0; i < _partitionLength; i++) {
 					_catToSite[i] = (short) (numberOfRateCategories * Utils::genRand());
+					catToSiteCount[_catToSite[i]]++;
 				}
 			} else {
-				/* TODO: Compute per-site categories */
-				cerr << "Categories mode not available." << endl;
-				exit(EX_UNIMPLEMENTED);
+				double gammaRates[numberOfRateCategories];
+				double * perSiteLikelihoods = (double *) malloc(
+						(size_t) _partitionLength * sizeof(double));
+				catToSiteCount[0] = _partitionLength;
+				if (!perSiteLikelihoods) {
+					cerr << "ERROR: There was a problem allocating memory."
+							<< endl;
+					exit(EX_MEMORY);
+				}
+				memcpy(gammaRates,
+						_pllPartitions->partitionData[partitionNumber]->gammaRates,
+						numberOfRateCategories * sizeof(double));
+
+				/* initialize the per-site likelihoods to a lower bound, e.g., the global likelihood */
+				for (unsigned int i = 0; i < _partitionLength; i++) {
+					perSiteLikelihoods[i] = _pllTree->likelihood;
+				}
+
+				for (int k = 0; k < numberOfRateCategories; k++) {
+
+					/* set all gamma rates to the same value */
+					for (int i = 0; i < numberOfRateCategories; i++) {
+						_pllPartitions->partitionData[partitionNumber]->gammaRates[i] =
+								gammaRates[k];
+					}
+
+					/* get per-site likelihood */
+					pllEvaluateLikelihood(_pllTree, _pllPartitions,
+							_pllTree->start, true, true);
+
+					double * X =
+							_pllPartitions->partitionData[partitionNumber]->perSiteLikelihoods;
+					double * Y = perSiteLikelihoods;
+					for (unsigned int i = 0; i < _partitionLength; i++) {
+						/* if likelihood improves, set this category */
+						if (*X > *Y) {
+							*Y = *X;
+							catToSiteCount[_catToSite[i]]--;
+							catToSiteCount[k]++;
+							_catToSite[i] = k;
+						}
+						X++;
+						Y++;
+					}
+				}
+
+				free(perSiteLikelihoods);
+
+				/* reset rates */
+				memcpy(
+						_pllPartitions->partitionData[partitionNumber]->gammaRates,
+						gammaRates, numberOfRateCategories * sizeof(double));
+				pllEvaluateLikelihood(_pllTree, _pllPartitions, _pllTree->start,
+						true, true);
+
+//				for (unsigned int i=0; i<_partitionLength; i++) {
+//					cout << _catToSite[i];
+//				}
+//				cout << endl;
 			}
+
+			/* print rates assignment summary */
+			cout.setf(ios_base::fixed, ios_base::floatfield);
+			cout << "Per site Gamma rate categories assignment:" << endl;
+			for (int k = 0; k < numberOfRateCategories; k++) {
+				cout << "  " << k << ": " << setprecision(5)
+						<< _pllPartitions->partitionData[partitionNumber]->gammaRates[k]
+						<< " (" << setprecision(2)
+						<< (double) 100.0 * catToSiteCount[k] / _partitionLength
+						<< "%)" << endl;
+			}
+			cout << endl;
+
 		}
 	}
 }
@@ -214,7 +288,7 @@ void Predictor::mutateSequence(char * currentSequence,
 		break;
 	}
 	}
-	cout << "    - Substitutions from ancestral = " << setprecision(3) << (double)substitutionsCount/_partitionLength << "%" << endl;
+	cout << "    - Substitutions from ancestral = " << setprecision(2) << (double)100.0*substitutionsCount/_partitionLength << "%" << endl;
 }
 
 #ifdef DEBUG
@@ -339,6 +413,39 @@ void Predictor::predictMissingSequences( void ) {
 		printNodes(_pllTree, _pllPartitions);
 		printBranchLengths(_pllTree, _pllPartitions);
 	#endif
+
+		evolveNode(ancestor->back, partAncestral);
+		free(partAncestral);
+	}
+}
+
+void Predictor::predictAllSequences( void ) {
+
+	_missingSequences.resize(1);
+	for (int taxon=1; taxon <=numberOfTaxa; taxon++) {
+		_missingSequences[0] = taxon;
+		nodeptr ancestor = _pllTree->nodep[taxon]->back;
+		/*
+		 * Compute probs size according to the maximum number of states.
+		 * This is necessary in case there are mixed protein-dna partitions.
+		 */
+		int probsSize = 0;
+		for (int i = 0; i < _pllPartitions->numberOfPartitions; i++) {
+			probsSize = max(_pllPartitions->partitionData[i]->states,
+					probsSize);
+		}
+		probsSize *= sequenceLength;
+		char * ancestral = (char *) malloc( (size_t) sequenceLength + 1);
+		double * probs = (double *) malloc(
+				(size_t) probsSize * sizeof(double));
+		pllGetAncestralState(_pllTree, _pllPartitions, ancestor, probs, ancestral);
+		free (probs);
+
+		/* extract the ancestral for the partition */
+		char * partAncestral = (char *) malloc(_partitionLength + 1);
+		memcpy(partAncestral, &(ancestral[_start]), _partitionLength);
+		partAncestral[_partitionLength] = '\0';
+		free(ancestral);
 
 		evolveNode(ancestor->back, partAncestral);
 		free(partAncestral);

@@ -346,6 +346,7 @@ int main(int argc, char * argv[]) {
 	cout << "TRACE: Tree=" << pllTree->tree_string << endl;
 #endif
 
+
 	cout << "Predicting sequences..." << endl << endl;
 	for (int currentPartition = 0;
 			currentPartition < pllPartitions->numberOfPartitions;
