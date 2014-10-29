@@ -8,6 +8,7 @@
 #include <iomanip>
 #include <cstdlib>
 #include <cstring>
+#include <sstream>
 #include <cmath>
 #include <cassert>
 #include <getopt.h>
@@ -99,6 +100,9 @@ void exit_with_usage(char * command) {
 				"                   and branch lengths are taken directly from the input tree.");
 	printf("\n\n");
 	printf(
+			"  -r, --replicates numberOfReplicates  Produce several replicates");
+	printf("\n\n");
+	printf(
 			"  -s, --seed       randomNumberSed     Set a custom seed (default: 12345)");
 	printf("\n\n");
 	printf(
@@ -120,6 +124,7 @@ int main(int argc, char * argv[]) {
 	pllAlignmentData * pllAlignment = 0;
 	string inputfile, treefile, partitionsfile, outputfile;
 	int randomNumberSeed = 12345;
+	unsigned int numberOfReplicates = 1;
 
 	static struct option long_options[] = {
 			{ "categories", required_argument, 0, 'c' },
@@ -127,12 +132,13 @@ int main(int argc, char * argv[]) {
 			{ "input", required_argument, 0, 'i' },
 			{ "tree", required_argument, 0, 't' },
 			{ "partitions", required_argument, 0, 'q' },
+			{ "replicates", required_argument, 0, 'r' },
 			{ "seed", required_argument, 0, 's' },
 			{ "output", required_argument, 0, 'o' },
 			{ 0, 0, 0, 0 } };
 
 	int opt = 0, long_index = 0;
-	while ((opt = getopt_long(argc, argv, "c:hi:t:q:s:o:", long_options,
+	while ((opt = getopt_long(argc, argv, "c:hi:t:q:r:s:o:", long_options,
 			&long_index)) != -1) {
 		switch (opt) {
 		case 'c':
@@ -173,6 +179,9 @@ int main(int argc, char * argv[]) {
 			break;
 		case 'o':
 			outputfile = optarg;
+			break;
+		case 'r':
+			numberOfReplicates = atoi(optarg);
 			break;
 		case 's':
 			randomNumberSeed = atoi(optarg);
@@ -348,22 +357,33 @@ int main(int argc, char * argv[]) {
 
 
 	cout << "Predicting sequences..." << endl << endl;
-	for (int currentPartition = 0;
-			currentPartition < pllPartitions->numberOfPartitions;
-			currentPartition++) {
-		seqpred::Predictor sequencePredictor(pllTree, pllPartitions,
-				pllAlignment, currentPartition);
-		sequencePredictor.predictMissingSequences();
+	for (unsigned int rep = 0; rep < numberOfReplicates; rep++) {
+
+		if (numberOfReplicates > 1) {
+			cout << "Replicate " << rep+1 << " of " << numberOfReplicates << endl;
+		}
+		for (int currentPartition = 0;
+				currentPartition < pllPartitions->numberOfPartitions;
+				currentPartition++) {
+			seqpred::Predictor sequencePredictor(pllTree, pllPartitions,
+					pllAlignment, currentPartition);
+			sequencePredictor.predictMissingSequences();
+		}
+		cout << endl << "...Done!" << endl << endl;
+	#ifdef PRINT_TRACE
+		pllAlignmentDataDumpConsole(pllAlignment);
+	#endif
+
+		stringstream rep_outputfile;
+		rep_outputfile << outputfile;
+		if (numberOfReplicates > 1) {
+			rep_outputfile << ".R" << rep;
+		}
+		pllAlignmentDataDumpFile(pllAlignment, PLL_FORMAT_PHYLIP,
+				rep_outputfile.str().c_str());
+
+		cout << "Alignment dumped to " << rep_outputfile.str() << endl << endl;
 	}
-	cout << endl << "...Done!" << endl << endl;
-#ifdef PRINT_TRACE
-	pllAlignmentDataDumpConsole(pllAlignment);
-#endif
-
-	pllAlignmentDataDumpFile(pllAlignment, PLL_FORMAT_PHYLIP,
-			outputfile.c_str());
-
-	cout << "Alignment dumped to " << outputfile << endl << endl;
 
 	pllAlignmentDataDestroy(pllAlignment);
 	pllPartitionsDestroy(pllTree, &pllPartitions);
