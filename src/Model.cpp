@@ -15,11 +15,28 @@ using namespace std;
 namespace seqpred {
 
 Model::Model(partitionList * pllPartitions, int partitionIndex) :
-		_pllPartitionInfo(pllPartitions->partitionData[partitionIndex]) {
+		_pllPartitionInfo(pllPartitions->partitionData[partitionIndex]),
+		_frequencies(), _substRates(), _charStates(), _statesToIntMap() {
+}
+
+Model::Model(const Model& other) :
+		_pllPartitionInfo(other._pllPartitionInfo),
+		_frequencies(other._frequencies), _substRates(other._substRates),
+		_charStates(other._charStates), _statesToIntMap(other._statesToIntMap) {
+
 }
 
 Model::~Model() {
 	/* nothing to do */
+}
+
+Model& Model::operator=(const Model& other) {
+	_pllPartitionInfo = other._pllPartitionInfo;
+	_frequencies = other._frequencies;
+	_substRates = other._substRates;
+	_charStates = other._charStates;
+	_statesToIntMap = other._statesToIntMap;
+	return *this;
 }
 
 double Model::computeFracchange( void ) const {

@@ -24,6 +24,7 @@ public:
 	* @brief Construct a new Predictor for a single partition
 	*/
 	Predictor(pllInstance * tree, partitionList * partitions, pllAlignmentData * phylip, int partitionNumber);
+	Predictor(const Predictor&);
 	virtual ~Predictor( void );
 
 	/**
@@ -42,6 +43,8 @@ public:
 	int getNumberOfMissingSequences(void) const {
 		return _missingSequences.size();
 	}
+
+	Predictor& operator=(const Predictor&);
 
 private:
 	/**

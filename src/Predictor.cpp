@@ -22,8 +22,12 @@ namespace seqpred {
 
 Predictor::Predictor(pllInstance * tree, partitionList * partitions,
 		pllAlignmentData * phylip, int partitionNumber) :
-		_pllTree(tree), _pllPartitions(partitions), _pllAlignment(phylip), _partitionNumber(
-				partitionNumber) {
+		_pllTree(tree), _pllPartitions(partitions), _pllAlignment(phylip),
+				_partitionNumber(partitionNumber), _numberOfStates(0),
+				_start(partitions->partitionData[partitionNumber]->lower),
+				_end(partitions->partitionData[partitionNumber]->upper),
+				_partitionLength(_end - _start), _catToSite(0),
+				_missingSequences(), _currentModel(0) {
 
 	if (Utils::getDataType(partitions, partitionNumber) == DT_NUCLEIC) {
 		_currentModel = new DnaModel(partitions, partitionNumber);
@@ -33,15 +37,9 @@ Predictor::Predictor(pllInstance * tree, partitionList * partitions,
 		_numberOfStates = 20;
 	}
 
-	/* get information from the partition */
-	_start = partitions->partitionData[partitionNumber]->lower;
-	_end = partitions->partitionData[partitionNumber]->upper;
-	_partitionLength = _end - _start;
-
 	/* get taxa with missing data in the partition */
 	_missingSequences = findMissingSequences();
 
-	_catToSite = 0;
 	if (_missingSequences.size()) {
 		if (categoriesMode != CAT_AVERAGE) {
 			_catToSite = (short *) calloc((size_t) _partitionLength, sizeof(short));
@@ -133,11 +131,42 @@ Predictor::Predictor(pllInstance * tree, partitionList * partitions,
 	}
 }
 
+Predictor::Predictor(const Predictor& other) :
+				_pllTree(other._pllTree), _pllPartitions(other._pllPartitions),
+						_pllAlignment(other._pllAlignment),
+						_partitionNumber(other._partitionNumber),
+						_numberOfStates(other._numberOfStates),
+						_start(other._start),_end(other._end),
+						_partitionLength(other._partitionLength), _catToSite(other._catToSite),
+						_missingSequences(other._missingSequences), _currentModel(other._currentModel) {
+	assert(_end > _start);
+	assert(_partitionLength == _end - _start);
+}
+
 Predictor::~Predictor( void ) {
 	delete _currentModel;
 	if (_catToSite) {
 		free(_catToSite);
 	}
+}
+
+Predictor& Predictor::operator=(const Predictor& other) {
+	_pllTree = other._pllTree;
+	_pllPartitions = other._pllPartitions;
+	_pllAlignment = other._pllAlignment;
+	_partitionNumber = other._partitionNumber;
+	_numberOfStates = other._numberOfStates;
+	_start = other._start;
+	_end = other._end;
+	_partitionLength = other._partitionLength;
+	_catToSite = other._catToSite;
+	_missingSequences = other._missingSequences;
+	_currentModel = other._currentModel;
+
+	assert(_partitionLength == _end - _start);
+	assert(_end > _start);
+
+	return *this;
 }
 
 vector<int> Predictor::findMissingSequences( void ) const {

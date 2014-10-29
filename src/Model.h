@@ -19,6 +19,8 @@ class Model {
 public:
 
 	Model(partitionList * pllPartitions, int partitionIndex);
+	Model(const Model&);
+
 	virtual ~Model();
 
 	/**
@@ -46,6 +48,8 @@ public:
 	int getStateIndex(char state) {
 		return _statesToIntMap[state];
 	}
+
+	Model& operator=(const Model&);
 
 protected:
 

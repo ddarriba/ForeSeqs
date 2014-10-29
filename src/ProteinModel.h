@@ -10,8 +10,6 @@
 
 #include "Model.h"
 
-#include <vector>
-
 #define NUM_AA 20
 #define SQNUM_AA NUM_AA*NUM_AA
 #define CUNUM_AA NUM_AA*NUM_AA*NUM_AA
