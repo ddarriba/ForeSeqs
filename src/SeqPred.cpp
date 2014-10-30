@@ -88,6 +88,11 @@ void exit_with_usage(char * command) {
 	printf(
 			"  -i, --input      inputFileName       Set the input alignment (mandatory)");
 	printf("\n\n");
+#ifdef TEST_SIM
+	printf(
+			"  -I, --original   originalFileName    Set the original alignment (for testing purposes)");
+	printf("\n\n");
+#endif
 	printf(
 			"  -o, --output     outputFileName      Set the output filename (default: [inputFile].predicted)");
 	printf("\n\n");
@@ -123,13 +128,19 @@ int main(int argc, char * argv[]) {
 	partitionList * pllPartitions = 0;
 	pllAlignmentData * pllAlignment = 0;
 	string inputfile, treefile, partitionsfile, outputfile;
-	int randomNumberSeed = 12345;
+#ifdef TEST_SIM
+	string originalfile;
+	pllAlignmentData * originalAlignment = 0;
+	bool originalFileDefined = false;
+#endif
+	unsigned int randomNumberSeed = 12345;
 	unsigned int numberOfReplicates = 1;
 
 	static struct option long_options[] = {
 			{ "categories", required_argument, 0, 'c' },
 			{ "help", no_argument, 0, 'h' },
 			{ "input", required_argument, 0, 'i' },
+			{ "original", required_argument, 0, 'I' },
 			{ "tree", required_argument, 0, 't' },
 			{ "partitions", required_argument, 0, 'q' },
 			{ "replicates", required_argument, 0, 'r' },
@@ -138,7 +149,7 @@ int main(int argc, char * argv[]) {
 			{ 0, 0, 0, 0 } };
 
 	int opt = 0, long_index = 0;
-	while ((opt = getopt_long(argc, argv, "c:hi:t:q:r:s:o:", long_options,
+	while ((opt = getopt_long(argc, argv, "c:hi:I:t:q:r:s:o:", long_options,
 			&long_index)) != -1) {
 		switch (opt) {
 		case 'c':
@@ -170,6 +181,15 @@ int main(int argc, char * argv[]) {
 		case 'i':
 			inputfile = optarg;
 			break;
+		case 'I':
+#ifdef TEST_SIM
+			originalfile = optarg;
+			originalFileDefined = true;
+#else
+			cerr << "[ERROR] -I argument is not available." << endl;
+			exit(EX_IOERR);
+#endif
+			break;
 		case 't':
 			treefile = optarg;
 			break;
@@ -191,6 +211,7 @@ int main(int argc, char * argv[]) {
 		}
 	}
 
+	srand(randomNumberSeed);
 	if (argc == 1) {
 		inputfile = "testdata/alignment";
 		treefile = "testdata/tree";
@@ -246,6 +267,41 @@ int main(int argc, char * argv[]) {
 	}
 	seqpred::numberOfTaxa = pllAlignment->sequenceCount;
 	seqpred::sequenceLength = pllAlignment->sequenceLength;
+
+#ifdef TEST_SIM
+	if (originalFileDefined && !seqpred::Utils::existsFile(originalfile)) {
+		cerr << "[ERROR] Alignment file (" << originalfile
+				<< ") does not exist." << endl;
+		exit(EX_IOERR);
+	}
+
+	if (originalFileDefined) {
+		originalAlignment = pllParseAlignmentFile(PLL_FORMAT_PHYLIP,
+				originalfile.c_str());
+		if (!originalAlignment) {
+			cerr
+					<< "[ERROR] There was an error parsing original alignment data."
+					<< endl;
+			exit(EX_IOERR);
+		}
+		if (seqpred::numberOfTaxa
+				!= (unsigned int) originalAlignment->sequenceCount) {
+			cerr << "[ERROR] Number of taxa in the original alignment ("
+					<< originalAlignment->sequenceCount
+					<< ") does not match the input file ("
+					<< seqpred::numberOfTaxa << ")." << endl;
+			exit(EX_IOERR);
+		}
+		if (seqpred::sequenceLength
+				!= (unsigned int) originalAlignment->sequenceLength) {
+			cerr << "[ERROR] Sequence length in the original alignment ("
+					<< originalAlignment->sequenceLength
+					<< ") does not match the input file ("
+					<< seqpred::sequenceLength << ")." << endl;
+			exit(EX_IOERR);
+		}
+	}
+#endif
 
 	if (partitionsFileDefined) {
 		/* Create partitions */
@@ -367,7 +423,22 @@ int main(int argc, char * argv[]) {
 				currentPartition++) {
 			seqpred::Predictor sequencePredictor(pllTree, pllPartitions,
 					pllAlignment, currentPartition);
+#ifdef TEST_SIM
+			if (originalFileDefined) {
+				sequencePredictor.predictMissingSequences(originalAlignment);
+				if (sequencePredictor.getMissingPartsCount()) {
+					cout << "Similarity in partition "
+							<< pllPartitions->partitionData[currentPartition]->partitionName
+							<< ": "
+							<< 100 * sequencePredictor.getSequenceSimilarity()
+							<< "%" << endl;
+				}
+			} else {
+				sequencePredictor.predictMissingSequences();
+			}
+#else
 			sequencePredictor.predictMissingSequences();
+#endif
 		}
 		cout << endl << "...Done!" << endl << endl;
 	#ifdef PRINT_TRACE
@@ -385,6 +456,11 @@ int main(int argc, char * argv[]) {
 		cout << "Alignment dumped to " << rep_outputfile.str() << endl << endl;
 	}
 
+#ifdef TEST_SIM
+			if (originalFileDefined) {
+				pllAlignmentDataDestroy(originalAlignment);
+			}
+#endif
 	pllAlignmentDataDestroy(pllAlignment);
 	pllPartitionsDestroy(pllTree, &pllPartitions);
 	pllDestroyInstance(pllTree);

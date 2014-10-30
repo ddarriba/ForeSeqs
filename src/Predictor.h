@@ -30,7 +30,7 @@ public:
 	/**
 	 * @brief Predict the missing sequences for all taxa
 	 */
-	void predictMissingSequences( void );
+	void predictMissingSequences( const pllAlignmentData * originalSequence = 0 );
 
 	/**
 	 * @brief Predict all sequences one by one, for testing purposes
@@ -43,6 +43,21 @@ public:
 	int getNumberOfMissingSequences(void) const {
 		return _missingSequences.size();
 	}
+
+	/**
+	 * @brief Get the sequence similarity with the original data
+	 */
+	double getSequenceSimilarity(void) const {
+		return _seqSimilarity;
+	}
+
+	/**
+	 * @brief Get the number of predicted partitions
+	 */
+	unsigned int getMissingPartsCount(void) const {
+		return _missingPartsCount;
+	}
+
 
 	Predictor& operator=(const Predictor&);
 
@@ -82,15 +97,18 @@ private:
 	partitionList * _pllPartitions;		/** PLL list of partitions */
 	pllAlignmentData * _pllAlignment;	/** PLL alignment data */
 
-	int _partitionNumber;			/** Partition for predicting the sequences */
-	int _numberOfStates;			/** Number of different states (4 for NT, 20 for AA) */
+	unsigned int _partitionNumber;	/** Partition for predicting the sequences */
+	unsigned int _numberOfStates;	/** Number of different states (4 for NT, 20 for AA) */
 	unsigned int _start;			/** Starting position of the partition */
 	unsigned int _end; 				/** Ending position of the partition */
 	unsigned int _partitionLength;	/** Number of sites (length) of the partition */
 	short * _catToSite;				/** Assignment of categories to sites */
 
 	std::vector<int> _missingSequences;	/** Vector of taxa with missing sequences */
+	unsigned int _missingPartsCount;	/** Number of predicted partitions */
 	Model * _currentModel;				/** Model for computing the P matrix */
+
+	double _seqSimilarity;	/** Sequence similarity to original alignment (testing) **/
 };
 
 } /* namespace seqpred */

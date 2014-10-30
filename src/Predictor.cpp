@@ -27,7 +27,8 @@ Predictor::Predictor(pllInstance * tree, partitionList * partitions,
 				_start(partitions->partitionData[partitionNumber]->lower),
 				_end(partitions->partitionData[partitionNumber]->upper),
 				_partitionLength(_end - _start), _catToSite(0),
-				_missingSequences(), _currentModel(0) {
+				_missingSequences(), _missingPartsCount(0),
+				_currentModel(0), _seqSimilarity(0) {
 
 	if (Utils::getDataType(partitions, partitionNumber) == DT_NUCLEIC) {
 		_currentModel = new DnaModel(partitions, partitionNumber);
@@ -39,12 +40,13 @@ Predictor::Predictor(pllInstance * tree, partitionList * partitions,
 
 	/* get taxa with missing data in the partition */
 	_missingSequences = findMissingSequences();
+	_missingPartsCount = _missingSequences.size();
 
 	if (_missingSequences.size()) {
 		if (categoriesMode != CAT_AVERAGE) {
 			_catToSite = (short *) calloc((size_t) _partitionLength, sizeof(short));
 			unsigned int catToSiteCount[numberOfRateCategories];
-			for (int k = 0; k < numberOfRateCategories; k++) {
+			for (unsigned int k = 0; k < numberOfRateCategories; k++) {
 				catToSiteCount[k] = 0;
 			}
 			if (categoriesMode == CAT_RANDOM) {
@@ -72,10 +74,10 @@ Predictor::Predictor(pllInstance * tree, partitionList * partitions,
 					perSiteLikelihoods[i] = _pllTree->likelihood;
 				}
 
-				for (int k = 0; k < numberOfRateCategories; k++) {
+				for (unsigned int k = 0; k < numberOfRateCategories; k++) {
 
 					/* set all gamma rates to the same value */
-					for (int i = 0; i < numberOfRateCategories; i++) {
+					for (unsigned int i = 0; i < numberOfRateCategories; i++) {
 						_pllPartitions->partitionData[partitionNumber]->gammaRates[i] =
 								gammaRates[k];
 					}
@@ -118,7 +120,7 @@ Predictor::Predictor(pllInstance * tree, partitionList * partitions,
 			/* print rates assignment summary */
 			cout.setf(ios_base::fixed, ios_base::floatfield);
 			cout << "Per site Gamma rate categories assignment:" << endl;
-			for (int k = 0; k < numberOfRateCategories; k++) {
+			for (unsigned int k = 0; k < numberOfRateCategories; k++) {
 				cout << "  " << k << ": " << setprecision(5)
 						<< _pllPartitions->partitionData[partitionNumber]->gammaRates[k]
 						<< " (" << setprecision(2)
@@ -138,7 +140,9 @@ Predictor::Predictor(const Predictor& other) :
 						_numberOfStates(other._numberOfStates),
 						_start(other._start),_end(other._end),
 						_partitionLength(other._partitionLength), _catToSite(other._catToSite),
-						_missingSequences(other._missingSequences), _currentModel(other._currentModel) {
+						_missingSequences(other._missingSequences),
+						_missingPartsCount(other._missingPartsCount),
+						_currentModel(other._currentModel),	_seqSimilarity(other._seqSimilarity) {
 	assert(_end > _start);
 	assert(_partitionLength == _end - _start);
 }
@@ -161,7 +165,9 @@ Predictor& Predictor::operator=(const Predictor& other) {
 	_partitionLength = other._partitionLength;
 	_catToSite = other._catToSite;
 	_missingSequences = other._missingSequences;
+	_missingPartsCount = other._missingPartsCount;
 	_currentModel = other._currentModel;
+	_seqSimilarity = other._seqSimilarity;
 
 	assert(_partitionLength == _end - _start);
 	assert(_end > _start);
@@ -265,9 +271,9 @@ void Predictor::mutateSequence(char * currentSequence,
 
 	/* construct and validate P matrix */
 	double matrix[numberOfRateCategories][_numberOfStates*_numberOfStates];
-	for (int i = 0; i < numberOfRateCategories; i++) {
+	for (unsigned int i = 0; i < numberOfRateCategories; i++) {
 		_currentModel->setMatrix(matrix[i], gammaRates[i] * branchLength);
-		for (int j = 0; j < _numberOfStates; j++) {
+		for (unsigned int j = 0; j < _numberOfStates; j++) {
 			assert(Utils::floatEquals(matrix[i][j*_numberOfStates + _numberOfStates - 1], 1.0));
 		}
 	}
@@ -276,9 +282,9 @@ void Predictor::mutateSequence(char * currentSequence,
 	case CAT_AVERAGE:
 	{
 		double averageMatrix[_numberOfStates * _numberOfStates];
-		for (int i = 0; i < _numberOfStates * _numberOfStates; i++) {
+		for (unsigned int i = 0; i < _numberOfStates * _numberOfStates; i++) {
 			averageMatrix[i] = 0.0;
-			for (int j = 0; j < numberOfRateCategories; j++) {
+			for (unsigned int j = 0; j < numberOfRateCategories; j++) {
 				averageMatrix[i] += matrix[j][i];
 			}
 			averageMatrix[i] /= numberOfRateCategories;
@@ -345,7 +351,7 @@ double Predictor::computeBranchLength(const nodeptr node) const {
 	double branchLength = 0.0;
 	if (_pllPartitions->numberOfPartitions > 1) {
 		/* compute the branch length as the average over all other partitions */
-		for (int i = 0; i < _pllPartitions->numberOfPartitions; i++) {
+		for (unsigned int i = 0; i < (unsigned int)_pllPartitions->numberOfPartitions; i++) {
 			if (_partitionNumber != i) {
 				branchLength += pllGetBranchLength(_pllTree, node, i);
 			}
@@ -393,13 +399,18 @@ void Predictor::evolveNode(const nodeptr node, const char * ancestralSequence) {
 	free(currentSequence);
 }
 
-void Predictor::predictMissingSequences( void ) {
+void Predictor::predictMissingSequences( const pllAlignmentData * originalSequence ) {
 
 #ifdef PRINT_TRACE
 	for (size_t i = 0; i < _missingSequences.size(); i++) {
 		cout << "TRACE: Missing sequence " << _missingSequences[i] << endl;
 	}
 #endif
+
+	vector<int> missingSequencesCopy;
+	if (originalSequence) {
+		missingSequencesCopy = _missingSequences;
+	}
 
 	/* loop over all possible subtrees with missing data */
 	while (_missingSequences.size()) {
@@ -445,13 +456,34 @@ void Predictor::predictMissingSequences( void ) {
 
 		evolveNode(ancestor->back, partAncestral);
 		free(partAncestral);
+
+		if (originalSequence) {
+			/* compute similarity */
+			_seqSimilarity = 0.0;
+			for (size_t i=0; i<missingSequencesCopy.size(); i++) {
+				int seq = missingSequencesCopy[i];
+				double simCount = 0.0;
+				unsigned int seqLen = 0;
+				if (Utils::getDataType(_pllPartitions, _partitionNumber)
+						== DT_NUCLEIC) {
+					for (size_t j = _start; j < _end; j++) {
+						bool validForComp;
+						simCount += Utils::compareNucStates(_pllAlignment->sequenceData[seq][j],
+								originalSequence->sequenceData[seq][j], &validForComp);
+						seqLen += validForComp;
+					}
+					_seqSimilarity += simCount/seqLen/missingSequencesCopy.size();
+				}
+				cout << "Similarity in sequence " << seq <<"/" << _pllPartitions->partitionData[_partitionNumber]->partitionName << ": " << 100*simCount/seqLen << "%" << endl;
+			}
+		}
 	}
 }
 
 void Predictor::predictAllSequences( void ) {
 
 	_missingSequences.resize(1);
-	for (int taxon=1; taxon <=numberOfTaxa; taxon++) {
+	for (unsigned int taxon=1; taxon <= numberOfTaxa; taxon++) {
 		_missingSequences[0] = taxon;
 		nodeptr ancestor = _pllTree->nodep[taxon]->back;
 		/*

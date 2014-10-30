@@ -15,6 +15,8 @@
 #include <cstdio>
 #include <map>
 
+//#define TEST_SIM 1
+
 #define EPSILON 1e-6		  /** epsilon for comparing floating point values */
 
 #define EX_OK EXIT_SUCCESS	  /** exit correctly */
@@ -91,12 +93,21 @@ public:
 	 * @return the data type (DT_NUCLEIC or DT_PROTEIC)
 	 */
 	static DataType getDataType(const partitionList * pllPartitions, int numberOfPartition);
+
+	/**
+	 * @brief Compare 2 nucleotide states
+	 *
+	 * @param state0 First state. It should be 'a', 'c', 'g' or 't'
+	 * @param state1 Second state. It can be either a nucleotide, an ambiguity or a gap
+	 * @param[out] validForComp 1, if state1 is 'a', 'c', 'g' or 't'
+	 */
+	static double compareNucStates(unsigned char state0, unsigned char state1, bool * validForComp);
 };
 
 extern CatMode categoriesMode;				/** Mode for selecting per-site rate categories */
-extern int numberOfRateCategories;			/** Number of gamma rate categories */
-extern int numberOfTaxa;					/* Number of taxa */
-extern int sequenceLength;					/* Number of sites (aa/bp) */
+extern unsigned int numberOfRateCategories;	/** Number of gamma rate categories */
+extern unsigned int numberOfTaxa;			/* Number of taxa */
+extern unsigned int sequenceLength;			/* Number of sites (aa/bp) */
 extern char ** taxaNames;					/* Name list of taxa */
 
 } /* namespace seqpred */

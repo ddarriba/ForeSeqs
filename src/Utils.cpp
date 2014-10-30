@@ -18,8 +18,8 @@ namespace seqpred {
 
 /* Number of categories hardcoded to 4 */
 CatMode categoriesMode = CAT_ESTIMATE;
-int numberOfRateCategories = 4;
-int numberOfTaxa, sequenceLength;
+unsigned int numberOfRateCategories = 4;
+unsigned int numberOfTaxa, sequenceLength;
 char ** taxaNames;
 
 double Utils::genRand(void) {
@@ -56,6 +56,17 @@ DataType Utils::getDataType(const partitionList * pllPartitions, int numberOfPar
 		pllPartitions->partitionData[numberOfPartition]->states
 		<< ") for partition " << numberOfPartition << endl;
 		exit(EX_IOERR);
+	}
+}
+
+double Utils::compareNucStates(unsigned char state0, unsigned char state1, bool * validForComp) {
+
+	*validForComp = state1=='A'||state1=='C'||state1=='G'||state1=='T';
+	if(state0 == state1) {
+		return 1.0;
+	} else {
+		/* TODO: Check partial similarity with ambiguities */
+		return 0.0;
 	}
 }
 
