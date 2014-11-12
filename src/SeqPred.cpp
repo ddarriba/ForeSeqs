@@ -372,6 +372,18 @@ int main(int argc, char * argv[]) {
 	cout << setw(20) << left << "Input tree:" << treefile << endl;
 	cout << setw(20) << left << "Partitions file:" << ((partitionsfile.length() > 0)?partitionsfile:"-") << endl;
 	cout << setw(20) << left << "Output file:" << outputfile << endl;
+	cout << setw(20) << left << "Branch lengths:";
+	switch (seqpred::branchLengthsMode) {
+	case seqpred::BL_AVERAGE:
+		cout << "Average" << endl;
+		break;
+	case seqpred::BL_DRAW:
+		cout << "Drawn" << endl;
+		break;
+	case seqpred::BL_SCALE:
+		cout << "Average scaler" << endl;
+		break;
+	}
 	cout << setw(20) << left << "Gamma rates:";
 	switch(seqpred::categoriesMode) {
 	case seqpred::CAT_RANDOM:
@@ -385,6 +397,7 @@ int main(int argc, char * argv[]) {
 			break;
 	}
 	cout << setw(20) << left << "Random seed:" << randomNumberSeed << endl;
+	cout << setw(20) << left << "#Replicates:" << numberOfReplicates << endl;
 	cout << setfill('-') << setw(60) << "" << setfill(' ') << endl;
 
 	/* Check partitions / Warn if needed */

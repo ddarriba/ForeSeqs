@@ -348,19 +348,37 @@ void printBranchLengths(pllInstance * _pllTree, partitionList * _pllPartitions) 
 #endif
 
 double Predictor::computeBranchLength(const nodeptr node) const {
+
 	double branchLength = 0.0;
-	if (_pllPartitions->numberOfPartitions > 1) {
-		/* compute the branch length as the average over all other partitions */
-		for (unsigned int i = 0; i < (unsigned int)_pllPartitions->numberOfPartitions; i++) {
-			if (_partitionNumber != i) {
-				branchLength += pllGetBranchLength(_pllTree, node, i);
+
+	switch (branchLengthsMode) {
+	case BL_AVERAGE: {
+		if (_pllPartitions->numberOfPartitions > 1) {
+			/* compute the branch length as the average over all other partitions */
+			for (unsigned int i = 0;
+					i < (unsigned int) _pllPartitions->numberOfPartitions;
+					i++) {
+				if (_partitionNumber != i) {
+					branchLength += pllGetBranchLength(_pllTree, node, i);
+				}
 			}
+			branchLength /= (_pllPartitions->numberOfPartitions - 1);
+		} else {
+			/* return the current and only branch length */
+			branchLength = pllGetBranchLength(_pllTree, node, _partitionNumber);
 		}
-		branchLength /= (_pllPartitions->numberOfPartitions - 1);
-	} else {
-		/* return the current and only branch length */
-		branchLength = pllGetBranchLength(_pllTree, node,
-				_partitionNumber);
+		break;
+	}
+	case BL_DRAW: {
+		cerr << "I AM SORRY: Unimplemented branch length stealing mode" << endl;
+		exit(EX_UNIMPLEMENTED);
+		break;
+	}
+	case BL_SCALE: {
+		cerr << "I AM SORRY: Unimplemented branch length stealing mode" << endl;
+		exit(EX_UNIMPLEMENTED);
+		break;
+	}
 	}
 	return branchLength;
 }
