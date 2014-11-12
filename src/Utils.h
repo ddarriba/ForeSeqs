@@ -34,6 +34,12 @@ enum CatMode {
 	CAT_ESTIMATE,	/** Estimated from other partitions */
 	CAT_AVERAGE		/** Average of all categories */
 	};
+/** Mode for stealing the branch lengths */
+enum BLMode {
+	BL_AVERAGE,		/** Average among all other partitions */
+	BL_DRAW,		/** Draw a scaler from an inferred distribution */
+	BL_SCALE		/** Find an average scaler */
+	};
 
 class Utils {
 public:
@@ -104,6 +110,7 @@ public:
 	static double compareNucStates(unsigned char state0, unsigned char state1, bool * validForComp);
 };
 
+extern BLMode branchLengthsMode;			/** Mode for stealing the branch lengths */
 extern CatMode categoriesMode;				/** Mode for selecting per-site rate categories */
 extern unsigned int numberOfRateCategories;	/** Number of gamma rate categories */
 extern unsigned int numberOfTaxa;			/* Number of taxa */

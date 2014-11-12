@@ -16,8 +16,9 @@ using namespace std;
 
 namespace seqpred {
 
-/* Number of categories hardcoded to 4 */
+BLMode branchLengthsMode = BL_AVERAGE;
 CatMode categoriesMode = CAT_ESTIMATE;
+/* Number of categories hardcoded to 4 */
 unsigned int numberOfRateCategories = 4;
 unsigned int numberOfTaxa, sequenceLength;
 char ** taxaNames;

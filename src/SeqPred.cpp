@@ -78,6 +78,11 @@ void exit_with_usage(char * command) {
 			"  %s -i inputFileName -t treeFileName [-q partitionsFileName] [-s seed] [-o outputFileName]",
 			command);
 	printf("\n\n");
+	printf("  -b, --branches    branchLengthsMode Set the mode for stealing the branch lengths (default: a)\n");
+	printf("      --branches    a (average)       Average of branch lengths for other partitions\n");
+	printf("      --branches    d (draw)          Draw a branch length from an inferred distribution\n");
+	printf("      --branches    s (scale)         Compute an average branch-length scaler\n");
+	printf("\n\n");
 	printf("  -c, --categories  categoriesMode    Set the mode for selecting the per-site category (default: r)\n");
 	printf("      --categories  r (random)        Random per-site category for each sequence\n");
 	printf("      --categories  e (estimate)      Estimated from other partitions\n");
@@ -137,6 +142,7 @@ int main(int argc, char * argv[]) {
 	unsigned int numberOfReplicates = 1;
 
 	static struct option long_options[] = {
+			{ "branches", required_argument, 0, 'b' },
 			{ "categories", required_argument, 0, 'c' },
 			{ "help", no_argument, 0, 'h' },
 			{ "input", required_argument, 0, 'i' },
@@ -149,9 +155,32 @@ int main(int argc, char * argv[]) {
 			{ 0, 0, 0, 0 } };
 
 	int opt = 0, long_index = 0;
-	while ((opt = getopt_long(argc, argv, "c:hi:I:t:q:r:s:o:", long_options,
+	while ((opt = getopt_long(argc, argv, "b:c:hi:I:t:q:r:s:o:", long_options,
 			&long_index)) != -1) {
 		switch (opt) {
+		case 'b':
+				{
+					if (strlen(optarg) > 1) {
+						cerr << "[ERROR] Invalid branch length stealing mode: " << optarg << endl;
+						exit(EX_IOERR);
+					}
+					char catMode = optarg[0];
+					switch(catMode) {
+					case 'a':
+						seqpred::branchLengthsMode = seqpred::BL_AVERAGE;
+						break;
+					case 'd':
+						seqpred::branchLengthsMode = seqpred::BL_DRAW;
+						break;
+					case 's':
+						seqpred::branchLengthsMode = seqpred::BL_SCALE;
+						break;
+					default:
+						cerr << "[ERROR] Invalid branch length stealing mode: " << optarg << endl;
+						exit(EX_IOERR);
+					}
+					break;
+				}
 		case 'c':
 		{
 			if (strlen(optarg) > 1) {
