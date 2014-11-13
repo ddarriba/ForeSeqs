@@ -27,8 +27,10 @@ Predictor::Predictor(pllInstance * tree, partitionList * partitions,
 				_start(partitions->partitionData[partitionNumber]->lower),
 				_end(partitions->partitionData[partitionNumber]->upper),
 				_partitionLength(_end - _start), _catToSite(0),
+				_missingSubtreesAncestors(),
 				_missingSequences(), _missingPartsCount(0),
-				_currentModel(0), _seqSimilarity(0) {
+				_currentModel(0), _seqSimilarity(0),
+				_branchLengthScaler(1.0) {
 
 	if (Utils::getDataType(partitions, partitionNumber) == DT_NUCLEIC) {
 		_currentModel = new DnaModel(partitions, partitionNumber);
@@ -111,10 +113,6 @@ Predictor::Predictor(pllInstance * tree, partitionList * partitions,
 				pllEvaluateLikelihood(_pllTree, _pllPartitions, _pllTree->start,
 						true, true);
 
-//				for (unsigned int i=0; i<_partitionLength; i++) {
-//					cout << _catToSite[i];
-//				}
-//				cout << endl;
 			}
 
 			/* print rates assignment summary */
@@ -140,9 +138,11 @@ Predictor::Predictor(const Predictor& other) :
 						_numberOfStates(other._numberOfStates),
 						_start(other._start),_end(other._end),
 						_partitionLength(other._partitionLength), _catToSite(other._catToSite),
+						_missingSubtreesAncestors(other._missingSubtreesAncestors),
 						_missingSequences(other._missingSequences),
 						_missingPartsCount(other._missingPartsCount),
-						_currentModel(other._currentModel),	_seqSimilarity(other._seqSimilarity) {
+						_currentModel(other._currentModel),	_seqSimilarity(other._seqSimilarity),
+						_branchLengthScaler(other._branchLengthScaler) {
 	assert(_end > _start);
 	assert(_partitionLength == _end - _start);
 }
@@ -207,7 +207,7 @@ boolean Predictor::subtreeIsMissing(const nodeptr node) const {
 	}
 }
 
-nodeptr Predictor::findMissingDataAncestor( void ) const {
+nodeptr Predictor::findMissingDataAncestor( nodeptr startingNode ) const {
 
 	nodeptr currentNode;
 
@@ -217,7 +217,7 @@ nodeptr Predictor::findMissingDataAncestor( void ) const {
 	}
 
 	/* start searching in a random missing node */
-	currentNode = _pllTree->nodep[_missingSequences[0]]->back;
+	currentNode = startingNode;
 
 	while (true) {
 		bool missingRight = subtreeIsMissing(currentNode->next->back);
@@ -352,7 +352,8 @@ double Predictor::computeBranchLength(const nodeptr node) const {
 	double branchLength = 0.0;
 
 	switch (branchLengthsMode) {
-	case BL_AVERAGE: {
+	case BL_AVERAGE:
+	case BL_SCALE: {
 		if (_pllPartitions->numberOfPartitions > 1) {
 			/* compute the branch length as the average over all other partitions */
 			for (unsigned int i = 0;
@@ -374,13 +375,66 @@ double Predictor::computeBranchLength(const nodeptr node) const {
 		exit(EX_UNIMPLEMENTED);
 		break;
 	}
-	case BL_SCALE: {
-		cerr << "I AM SORRY: Unimplemented branch length stealing mode" << endl;
-		exit(EX_UNIMPLEMENTED);
-		break;
 	}
+	return branchLength * _branchLengthScaler;
+}
+
+double Predictor::getSumBranches(nodeptr node, int * numBranches) const {
+	double sum = 0.0;
+	if (find(_missingSubtreesAncestors.begin(),
+			_missingSubtreesAncestors.end(), node->next)
+			== _missingSubtreesAncestors.end() && find(_missingSubtreesAncestors.begin(),
+					_missingSubtreesAncestors.end(), node->next->next)
+					== _missingSubtreesAncestors.end()) {
+		if ((unsigned int) node->number <= numberOfTaxa) {
+			for (unsigned int i = 0;
+					i < (unsigned int) _pllPartitions->numberOfPartitions;
+					i++) {
+				if (i != _partitionNumber) {
+					sum += pllGetBranchLength(_pllTree, node, i);
+				}
+			}
+			sum /= pllGetBranchLength(_pllTree, node, _partitionNumber);
+			*numBranches = 1;
+		} else {
+			for (unsigned int i = 0;
+					i < (unsigned int) _pllPartitions->numberOfPartitions;
+					i++) {
+				if (i != _partitionNumber) {
+					sum += pllGetBranchLength(_pllTree, node, i);
+				}
+			}
+			sum /= pllGetBranchLength(_pllTree, node, _partitionNumber);
+			int nb = 0;
+			sum += getSumBranches(node->next->back, &nb);
+			*numBranches += nb;
+			sum += getSumBranches(node->next->next->back, &nb);
+			*numBranches += nb;
+		}
 	}
-	return branchLength;
+	return sum / (_pllPartitions->numberOfPartitions - 1);
+}
+
+double Predictor::computeBranchLengthScaler( void ) const {
+
+	double scaler = 0.0;
+
+	if (_missingSubtreesAncestors.size()) {
+
+//		for (uint i =0; i< _missingSubtreesAncestors.size(); i++) {
+//			cout << _missingSubtreesAncestors[i]->number << endl;
+//		}
+
+		/* traverse the tree starting at one arbitrary ancestor node */
+		nodeptr startingNode = _missingSubtreesAncestors[0];
+
+		int nb = 0;
+		scaler = getSumBranches(startingNode->next->back, &nb) / nb;
+		scaler += getSumBranches(startingNode->next->next->back, &nb) / nb;
+		scaler = 1/scaler;
+	}
+
+	return scaler;
 }
 
 void Predictor::evolveNode(const nodeptr node, const char * ancestralSequence) {
@@ -430,10 +484,26 @@ void Predictor::predictMissingSequences( const pllAlignmentData * originalSequen
 		missingSequencesCopy = _missingSequences;
 	}
 
+	for (size_t i=0; i<_missingSequences.size(); i++) {
+		nodeptr ancestor = findMissingDataAncestor( _pllTree->nodep[_missingSequences[i]]->back );
+		if (find(_missingSubtreesAncestors.begin(), _missingSubtreesAncestors.end(),
+						ancestor) == _missingSubtreesAncestors.end()) {
+			_missingSubtreesAncestors.push_back(ancestor);
+		}
+	}
+
+	if (branchLengthsMode == BL_SCALE && _missingSequences.size()) {
+		_branchLengthScaler = computeBranchLengthScaler();
+		cout << "Applying branch length scaler " << _branchLengthScaler << endl << endl;
+	}
+
 	/* loop over all possible subtrees with missing data */
+	unsigned int nextAncestor = 0;
 	while (_missingSequences.size()) {
+
 		cout << "Predicting subtree" << endl;
-		nodeptr ancestor = findMissingDataAncestor();
+		assert(nextAncestor < _missingSubtreesAncestors.size());
+		nodeptr ancestor = _missingSubtreesAncestors[nextAncestor++];
 
 		nodeptr startNode = ancestor;
 
@@ -496,6 +566,9 @@ void Predictor::predictMissingSequences( const pllAlignmentData * originalSequen
 			}
 		}
 	}
+
+	/* ensure there is no subtree left */
+	assert(nextAncestor == _missingSubtreesAncestors.size());
 }
 
 void Predictor::predictAllSequences( void ) {

@@ -69,8 +69,10 @@ private:
 
 	/**
 	* @brief Find the farthest common ancestor with all missing data
+	*
+	* @param[out] missingBranches the branches in the missing subtree
 	*/
-	nodeptr findMissingDataAncestor( void ) const;
+	nodeptr findMissingDataAncestor( nodeptr startingNode ) const;
 
 	/**
 	* @brief Find all the taxa with missing sequence.
@@ -93,6 +95,13 @@ private:
 	 */
 	double computeBranchLength(const nodeptr node) const;
 
+	double getSumBranches(nodeptr node, int * numBranches) const;
+
+	/**
+	 * @brief Compute the parameters for the branch length scaling
+	 */
+	double computeBranchLengthScaler( void ) const;
+
 	pllInstance * _pllTree;				/** PLL instance */
 	partitionList * _pllPartitions;		/** PLL list of partitions */
 	pllAlignmentData * _pllAlignment;	/** PLL alignment data */
@@ -104,11 +113,13 @@ private:
 	unsigned int _partitionLength;	/** Number of sites (length) of the partition */
 	short * _catToSite;				/** Assignment of categories to sites */
 
+	std::vector<nodeptr> _missingSubtreesAncestors; /** Subtrees ancestors */
 	std::vector<int> _missingSequences;	/** Vector of taxa with missing sequences */
 	unsigned int _missingPartsCount;	/** Number of predicted partitions */
 	Model * _currentModel;				/** Model for computing the P matrix */
 
 	double _seqSimilarity;	/** Sequence similarity to original alignment (testing) **/
+	double _branchLengthScaler; /** Scaler for branch length modes 's' and 'd' */
 };
 
 } /* namespace seqpred */
