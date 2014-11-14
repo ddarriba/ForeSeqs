@@ -31,7 +31,7 @@ Predictor::Predictor(pllInstance * tree, partitionList * partitions,
 				_missingSubtreesAncestors(),
 				_missingSequences(), _missingPartsCount(0),
 				_currentModel(0), _seqSimilarity(0),
-				_branchLengthScaler(1.0) {
+				_branchLengthScaler(1.0), _scalers() {
 
 	if (Utils::getDataType(partitions, partitionNumber) == DT_NUCLEIC) {
 		_currentModel = new DnaModel(partitions, partitionNumber);
@@ -143,7 +143,8 @@ Predictor::Predictor(const Predictor& other) :
 						_missingSequences(other._missingSequences),
 						_missingPartsCount(other._missingPartsCount),
 						_currentModel(other._currentModel),	_seqSimilarity(other._seqSimilarity),
-						_branchLengthScaler(other._branchLengthScaler) {
+						_branchLengthScaler(other._branchLengthScaler),
+						_scalers(other._scalers) {
 	assert(_end > _start);
 	assert(_partitionLength == _end - _start);
 }
@@ -348,36 +349,45 @@ void printBranchLengths(pllInstance * _pllTree, partitionList * _pllPartitions) 
 }
 #endif
 
+double Predictor::drawBranchLengthScaler( void ) const {
+	double r = Utils::genRand();
+	int j=0;
+	branchInfo bInfo = _scalers[0];
+	for (j=0; r>bInfo.weight; j++) bInfo=_scalers[j];
+	return (_scalers[j].scaler);
+}
+
 double Predictor::computeBranchLength(const nodeptr node) const {
 
 	double branchLength = 0.0;
+	if (_pllPartitions->numberOfPartitions > 1) {
+		/* compute the branch length as the average over all other partitions */
+		for (unsigned int i = 0;
+				i < (unsigned int) _pllPartitions->numberOfPartitions; i++) {
+			if (_partitionNumber != i) {
+				branchLength += pllGetBranchLength(_pllTree, node, i);
+			}
+		}
+		branchLength /= (_pllPartitions->numberOfPartitions - 1);
+	} else {
+		/* return the current and only branch length */
+		branchLength = pllGetBranchLength(_pllTree, node, _partitionNumber);
+	}
 
 	switch (branchLengthsMode) {
 	case BL_AVERAGE:
 	case BL_SCALE: {
-		if (_pllPartitions->numberOfPartitions > 1) {
-			/* compute the branch length as the average over all other partitions */
-			for (unsigned int i = 0;
-					i < (unsigned int) _pllPartitions->numberOfPartitions;
-					i++) {
-				if (_partitionNumber != i) {
-					branchLength += pllGetBranchLength(_pllTree, node, i);
-				}
-			}
-			branchLength /= (_pllPartitions->numberOfPartitions - 1);
-		} else {
-			/* return the current and only branch length */
-			branchLength = pllGetBranchLength(_pllTree, node, _partitionNumber);
-		}
+		branchLength *= _branchLengthScaler;
 		break;
 	}
 	case BL_DRAW: {
-		cerr << "I AM SORRY: Unimplemented branch length stealing mode" << endl;
-		exit(EX_UNIMPLEMENTED);
+		double scaler = drawBranchLengthScaler();
+		branchLength *= scaler;
+		cout << "  - Branch length scaler drawn: " << scaler << endl;
 		break;
 	}
 	}
-	return branchLength * _branchLengthScaler;
+	return branchLength;
 }
 
 #define WMOD 0.5
@@ -387,6 +397,45 @@ double Predictor::computeBranchLength(const nodeptr node) const {
 static double computeWeight(double x) {
 	double w = 1/(WSIGMA*sqrt(2*3.1415926))*exp(-((x-WMEAN)*(x-WMEAN))/(2*WSIGMA*WSIGMA));
 	return w;
+}
+
+void Predictor::getBranches(nodeptr node, int depth, double * cumWeight, vector<branchInfo> & branches) const {
+
+	double localSum = 0.0d, ratio = 0.0d, curWeight;
+	if (find(_missingSubtreesAncestors.begin(),
+			_missingSubtreesAncestors.end(), node->next)
+			== _missingSubtreesAncestors.end() && find(_missingSubtreesAncestors.begin(),
+					_missingSubtreesAncestors.end(), node->next->next)
+					== _missingSubtreesAncestors.end()) {
+
+		/* compute the current weighted branch length ratio */
+		for (unsigned int i = 0;
+				i < (unsigned int) _pllPartitions->numberOfPartitions; i++) {
+			if (i != _partitionNumber) {
+				localSum += pllGetBranchLength(_pllTree, node, i);
+			}
+		}
+		curWeight = computeWeight(depth * WMOD);
+		ratio = (_pllPartitions->numberOfPartitions - 1) * pllGetBranchLength(_pllTree, node, _partitionNumber)/localSum;
+		cout << setw(5) << right << node->number << " - weight: " << curWeight << " ratio: "
+				<< ratio << endl;
+
+		/* add the new sample */
+		branchInfo bInfo;
+		bInfo.branchNumber = node->number;
+		bInfo.scaler = ratio;
+		bInfo.weight = curWeight;
+		branches.push_back(bInfo);
+
+		if ((unsigned int) node->number > numberOfTaxa) {
+			/* inspect children */
+			double child1W = 0.0d, child2W = 0.0d;
+			getBranches(node->next->back, depth+1, &child1W, branches);
+			getBranches(node->next->next->back, depth+1, &child2W, branches);
+			*cumWeight += child1W + child2W;
+		}
+		*cumWeight += curWeight;
+	}
 }
 
 double Predictor::getSumBranches(nodeptr node, int depth, double * weight) const {
@@ -427,24 +476,24 @@ double Predictor::getSumBranches(nodeptr node, int depth, double * weight) const
 	return (ratio + childrenSum);
 }
 
-double Predictor::computeBranchLengthScaler( void ) const {
-
-	double scaler = 0.0;
-
-	if (_missingSubtreesAncestors.size()) {
-
-		/* traverse the tree starting at one arbitrary ancestor node */
-		nodeptr startingNode = _missingSubtreesAncestors[0];
-
-		cout << "Branch length scaler:" << endl;
-		double cumWeight = 0;
-		scaler = getSumBranches(startingNode->next->back, 0, &cumWeight);
-		scaler += getSumBranches(startingNode->next->next->back, 0, &cumWeight);
-		scaler = scaler/cumWeight;
-	}
-
-	return scaler;
-}
+//double Predictor::computeBranchLengthScaler( void ) const {
+//
+//	double scaler = 0.0;
+//
+//	if (_missingSubtreesAncestors.size()) {
+//
+//		/* traverse the tree starting at one arbitrary ancestor node */
+//		nodeptr startingNode = _missingSubtreesAncestors[0];
+//
+//		cout << "Branch length scaler:" << endl;
+//		double cumWeight = 0;
+//		scaler = getSumBranches(startingNode->next->back, 0, &cumWeight);
+//		scaler += getSumBranches(startingNode->next->next->back, 0, &cumWeight);
+//		scaler = scaler/cumWeight;
+//	}
+//
+//	return scaler;
+//}
 
 void Predictor::evolveNode(const nodeptr node, const char * ancestralSequence) {
 
@@ -501,9 +550,39 @@ void Predictor::predictMissingSequences( const pllAlignmentData * originalSequen
 		}
 	}
 
-	if (branchLengthsMode == BL_SCALE && _missingSequences.size()) {
-		_branchLengthScaler = computeBranchLengthScaler();
-		cout << "Applying branch length scaler " << _branchLengthScaler << endl << endl;
+	if (_missingSequences.size()) {
+		if (branchLengthsMode == BL_SCALE) {
+			/* compute branch length scaler */
+			if (_missingSubtreesAncestors.size()) {
+				/* traverse the tree starting at one arbitrary ancestor node */
+				nodeptr startingNode = _missingSubtreesAncestors[0];
+
+				cout << "Branch length scaler:" << endl;
+				double cumWeight = 0.0d;
+				_branchLengthScaler = getSumBranches(startingNode->next->back, 0,
+						&cumWeight);
+				_branchLengthScaler += getSumBranches(
+						startingNode->next->next->back, 0, &cumWeight);
+				_branchLengthScaler /= cumWeight;
+			}
+			cout << "Applying branch length scaler " << _branchLengthScaler << endl << endl;
+		} else if (branchLengthsMode == BL_DRAW) {
+			/* traverse the tree starting at one arbitrary ancestor node */
+			nodeptr startingNode = _missingSubtreesAncestors[0];
+
+			cout << "Branch length scaler:" << endl;
+			double cumWeight = 0.0d;
+			getBranches(startingNode->next->back, 0, &cumWeight, _scalers);
+			getBranches(startingNode->next->next->back, 0, &cumWeight, _scalers);
+			cout << endl;
+
+			/* normalize the weights */
+			_scalers[0].weight /= cumWeight;
+			for (size_t i = 1; i < _scalers.size(); i++) {
+				_scalers[i].weight /= cumWeight;
+				_scalers[i].weight += _scalers[i-1].weight;
+			}
+		}
 	}
 
 	/* loop over all possible subtrees with missing data */

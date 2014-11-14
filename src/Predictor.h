@@ -18,6 +18,12 @@
 
 namespace seqpred {
 
+typedef struct {
+	unsigned int branchNumber;
+	double scaler;
+	double weight;
+} branchInfo;
+
 class Predictor {
 public:
 	/**
@@ -104,10 +110,8 @@ private:
 	*/
 	double getSumBranches(nodeptr node, int depth, double * weight) const;
 
-	/**
-	 * @brief Compute the parameters for the branch length scaling
-	 */
-	double computeBranchLengthScaler( void ) const;
+	void getBranches(nodeptr node, int depth, double * cumWeight, std::vector<branchInfo> & branches) const;
+	double drawBranchLengthScaler( void ) const;
 
 	pllInstance * _pllTree;				/** PLL instance */
 	partitionList * _pllPartitions;		/** PLL list of partitions */
@@ -127,6 +131,7 @@ private:
 
 	double _seqSimilarity;	/** Sequence similarity to original alignment (testing) **/
 	double _branchLengthScaler; /** Scaler for branch length modes 's' and 'd' */
+	std::vector<branchInfo> _scalers;	/** Vector of branch scalers information */
 };
 
 } /* namespace seqpred */
