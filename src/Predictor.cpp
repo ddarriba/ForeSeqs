@@ -15,6 +15,7 @@
 #include <algorithm>
 #include <cstring>
 #include <cassert>
+#include <cmath>
 
 using namespace std;
 
@@ -379,40 +380,51 @@ double Predictor::computeBranchLength(const nodeptr node) const {
 	return branchLength * _branchLengthScaler;
 }
 
-double Predictor::getSumBranches(nodeptr node, int * numBranches) const {
-	double sum = 0.0;
+#define WMOD 0.5
+#define WMEAN 0
+#define WSIGMA 1
+
+static double computeWeight(double x) {
+	double w = 1/(WSIGMA*sqrt(2*3.1415926))*exp(-((x-WMEAN)*(x-WMEAN))/(2*WSIGMA*WSIGMA));
+	return w;
+}
+
+double Predictor::getSumBranches(nodeptr node, int depth, double * weight) const {
+
+	double childrenSum = 0.0d, localSum = 0.0d, ratio = 0.0d;
+	double curWeight;
 	if (find(_missingSubtreesAncestors.begin(),
 			_missingSubtreesAncestors.end(), node->next)
 			== _missingSubtreesAncestors.end() && find(_missingSubtreesAncestors.begin(),
 					_missingSubtreesAncestors.end(), node->next->next)
 					== _missingSubtreesAncestors.end()) {
-		if ((unsigned int) node->number <= numberOfTaxa) {
-			for (unsigned int i = 0;
-					i < (unsigned int) _pllPartitions->numberOfPartitions;
-					i++) {
-				if (i != _partitionNumber) {
-					sum += pllGetBranchLength(_pllTree, node, i);
-				}
+
+		/* compute the current weighted branch length ratio */
+		for (unsigned int i = 0;
+				i < (unsigned int) _pllPartitions->numberOfPartitions; i++) {
+			if (i != _partitionNumber) {
+				localSum += pllGetBranchLength(_pllTree, node, i);
 			}
-			sum /= pllGetBranchLength(_pllTree, node, _partitionNumber);
-			*numBranches = 1;
-		} else {
-			for (unsigned int i = 0;
-					i < (unsigned int) _pllPartitions->numberOfPartitions;
-					i++) {
-				if (i != _partitionNumber) {
-					sum += pllGetBranchLength(_pllTree, node, i);
-				}
-			}
-			sum /= pllGetBranchLength(_pllTree, node, _partitionNumber);
-			int nb = 0;
-			sum += getSumBranches(node->next->back, &nb);
-			*numBranches += nb;
-			sum += getSumBranches(node->next->next->back, &nb);
-			*numBranches += nb;
 		}
+		curWeight = computeWeight(depth * WMOD);
+		ratio = (_pllPartitions->numberOfPartitions - 1) * pllGetBranchLength(_pllTree, node, _partitionNumber)/localSum;
+		cout << setw(5) << right << node->number << " - weight: " << curWeight << " ratio: "
+				<< ratio << endl;
+		ratio *= curWeight;
+
+		if ((unsigned int) node->number > numberOfTaxa) {
+			/* inspect children */
+			double child1W = 0.0d, child2W = 0.0d;
+			childrenSum += getSumBranches(node->next->back, depth+1, &child1W);
+			childrenSum += getSumBranches(node->next->next->back, depth+1, &child2W);
+			*weight += child1W + child2W;
+		} else {
+			assert(*weight == 0.0);
+		}
+		*weight += curWeight;
+
 	}
-	return sum / (_pllPartitions->numberOfPartitions - 1);
+	return (ratio + childrenSum);
 }
 
 double Predictor::computeBranchLengthScaler( void ) const {
@@ -421,17 +433,14 @@ double Predictor::computeBranchLengthScaler( void ) const {
 
 	if (_missingSubtreesAncestors.size()) {
 
-//		for (uint i =0; i< _missingSubtreesAncestors.size(); i++) {
-//			cout << _missingSubtreesAncestors[i]->number << endl;
-//		}
-
 		/* traverse the tree starting at one arbitrary ancestor node */
 		nodeptr startingNode = _missingSubtreesAncestors[0];
 
-		int nb = 0;
-		scaler = getSumBranches(startingNode->next->back, &nb) / nb;
-		scaler += getSumBranches(startingNode->next->next->back, &nb) / nb;
-		scaler = 1/scaler;
+		cout << "Branch length scaler:" << endl;
+		double cumWeight = 0;
+		scaler = getSumBranches(startingNode->next->back, 0, &cumWeight);
+		scaler += getSumBranches(startingNode->next->next->back, 0, &cumWeight);
+		scaler = scaler/cumWeight;
 	}
 
 	return scaler;

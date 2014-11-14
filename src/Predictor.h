@@ -95,7 +95,14 @@ private:
 	 */
 	double computeBranchLength(const nodeptr node) const;
 
-	double getSumBranches(nodeptr node, int * numBranches) const;
+	/**
+	* @brief Recursive algorithm for computing the weighted sum of branch lengths
+	*
+	* @param node The node for computing
+	* @param depth The current depth in the algorithm
+	* @param[out] weight The cummulative weight of subtree at the current node
+	*/
+	double getSumBranches(nodeptr node, int depth, double * weight) const;
 
 	/**
 	 * @brief Compute the parameters for the branch length scaling
