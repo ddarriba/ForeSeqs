@@ -353,7 +353,7 @@ double Predictor::drawBranchLengthScaler( void ) const {
 	double r = Utils::genRand();
 	int j=0;
 	branchInfo bInfo = _scalers[0];
-	for (j=0; r>bInfo.weight; j++) bInfo=_scalers[j];
+	for (j=0; r>bInfo.weight; j++) bInfo=_scalers[j+1];
 	return (_scalers[j].scaler);
 }
 
