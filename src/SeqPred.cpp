@@ -413,16 +413,6 @@ int main(int argc, char * argv[]) {
 
 	/* Start! */
 
-	pllTreeInitTopologyRandom(pllTree, seqpred::numberOfTaxa,
-			pllAlignment->sequenceLabels);
-
-	cout << endl << "Loading alignment " << endl;
-	pllLoadAlignment(pllTree, pllAlignment, pllPartitions);
-	seqpred::taxaNames = pllTree->nameList;
-
-	cout << "Initializing model " << endl;
-	pllInitModel(pllTree, pllPartitions);
-
 	pllNewickTree * nt;
 	nt = pllNewickParseFile(treefile.c_str());
 	if (!nt) {
@@ -436,10 +426,19 @@ int main(int argc, char * argv[]) {
 		return (EX_IOERR);
 	}
 
+//		pllTreeInitTopologyRandom(pllTree, seqpred::numberOfTaxa,
+//				pllAlignment->sequenceLabels);
+
 	cout << "Seting fixed topology " << endl;
 	pllTreeInitTopologyNewick(pllTree, nt, PLL_FALSE);
-
 	pllNewickParseDestroy(&nt);
+
+	cout << endl << "Loading alignment " << endl;
+	pllLoadAlignment(pllTree, pllAlignment, pllPartitions);
+	seqpred::taxaNames = pllTree->nameList;
+
+	cout << "Initializing model " << endl;
+	pllInitModel(pllTree, pllPartitions);
 
 	pllEvaluateLikelihood(pllTree, pllPartitions, pllTree->start, true, false);
 

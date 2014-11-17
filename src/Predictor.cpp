@@ -182,7 +182,7 @@ vector<int> Predictor::findMissingSequences( void ) const {
 
 	unsigned char undefinedSite = (_numberOfStates==4)?15:22;
 	int missing;
-	for (int i = 1; i <= _pllTree->ntips; i++) {
+	for (int i = 1; i <= _pllTree->mxtips; i++) {
 		missing = 1;
 		for (unsigned int j = _start; j < _end; j++) {
 			missing &= (_pllTree->yVector[i][j] == undefinedSite);
@@ -191,6 +191,7 @@ vector<int> Predictor::findMissingSequences( void ) const {
 			missingSeqs.push_back(i);
 		}
 	}
+
 	return missingSeqs;
 }
 
