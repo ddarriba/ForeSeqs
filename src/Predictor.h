@@ -74,9 +74,10 @@ private:
 	boolean subtreeIsMissing(const nodeptr node) const;
 
 	/**
-	* @brief Find the farthest common ancestor with all missing data
+	* @brief Find the farthest common ancestor having all missing data
 	*
-	* @param[out] missingBranches the branches in the missing subtree
+	* @param[in] startingNode Starting node with missing data
+	* @return The root of the subtree with all missing data
 	*/
 	nodeptr findMissingDataAncestor( nodeptr startingNode ) const;
 
@@ -88,16 +89,26 @@ private:
 
 	/**
 	* @brief Mutates a sequence following the current model starting from the ancestor sequence
+	*
+	* @param[out] currentSequence The sequence to mutate
+	* @param ancestralSequence The ancestral
+	* @param branchLength The branch length
 	*/
 	void mutateSequence ( char * currentSequence, const char * ancestralSequence, double branchLength );
 
 	/**
 	* @brief Predict the sequences for a whole subtree
+	*
+	* @param node The node to evolve
+	* @param ancestralSequence The ancestral
 	*/
 	void evolveNode(const nodeptr node, const char * ancestralSequence);
 
 	/**
 	 * @brief Compute the branch length for a node
+	 *
+	 * @param node The node to compute the branch length
+	 * @return The branch length
 	 */
 	double computeBranchLength(const nodeptr node) const;
 

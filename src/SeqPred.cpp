@@ -15,6 +15,9 @@
 
 using namespace std;
 
+void optimizeModelParameters(pllInstance *,	partitionList *);
+void exit_with_usage(char *);
+
 void optimizeModelParameters(pllInstance * pllTree,
 		partitionList * pllPartitions) {
 	double lk = 0.0;
@@ -294,8 +297,8 @@ int main(int argc, char * argv[]) {
 		cerr << "[ERROR] There was an error parsing input data." << endl;
 		exit(EX_IOERR);
 	}
-	seqpred::numberOfTaxa = pllAlignment->sequenceCount;
-	seqpred::sequenceLength = pllAlignment->sequenceLength;
+	seqpred::numberOfTaxa = (unsigned int) pllAlignment->sequenceCount;
+	seqpred::sequenceLength = (unsigned int) pllAlignment->sequenceLength;
 
 #ifdef TEST_SIM
 	if (originalFileDefined && !seqpred::Utils::existsFile(originalfile)) {
@@ -365,7 +368,7 @@ int main(int argc, char * argv[]) {
 	cout << setfill('-') << setw(60) << "" << setfill(' ') << endl;
 	char header[60];
 	sprintf(header, " Sequence predictor v%s", PACKAGE_VERSION);
-	unsigned int padding = 30 + (strlen(header) / 2);
+	int padding = 30 + (strlen(header) / 2);
 	cout << setw(padding) << header << endl;
 	cout << setfill('-') << setw(60) << "" << setfill(' ') << endl;
 	cout << setw(20) << left << "Input alignment:" << inputfile << endl;
@@ -425,9 +428,6 @@ int main(int argc, char * argv[]) {
 		printf("%d\n", errno);
 		return (EX_IOERR);
 	}
-
-//		pllTreeInitTopologyRandom(pllTree, seqpred::numberOfTaxa,
-//				pllAlignment->sequenceLabels);
 
 	cout << "Seting fixed topology " << endl;
 	pllTreeInitTopologyNewick(pllTree, nt, PLL_FALSE);

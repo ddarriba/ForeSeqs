@@ -402,7 +402,7 @@ static double computeWeight(double x) {
 
 void Predictor::getBranches(nodeptr node, int depth, double * cumWeight, vector<branchInfo> & branches) const {
 
-	double localSum = 0.0d, ratio = 0.0d, curWeight;
+	double localSum = 0.0, ratio = 0.0, curWeight;
 	if (find(_missingSubtreesAncestors.begin(),
 			_missingSubtreesAncestors.end(), node->next)
 			== _missingSubtreesAncestors.end() && find(_missingSubtreesAncestors.begin(),
@@ -430,7 +430,7 @@ void Predictor::getBranches(nodeptr node, int depth, double * cumWeight, vector<
 
 		if ((unsigned int) node->number > numberOfTaxa) {
 			/* inspect children */
-			double child1W = 0.0d, child2W = 0.0d;
+			double child1W = 0.0, child2W = 0.0;
 			getBranches(node->next->back, depth+1, &child1W, branches);
 			getBranches(node->next->next->back, depth+1, &child2W, branches);
 			*cumWeight += child1W + child2W;
@@ -441,7 +441,7 @@ void Predictor::getBranches(nodeptr node, int depth, double * cumWeight, vector<
 
 double Predictor::getSumBranches(nodeptr node, int depth, double * weight) const {
 
-	double childrenSum = 0.0d, localSum = 0.0d, ratio = 0.0d;
+	double childrenSum = 0.0, localSum = 0.0, ratio = 0.0;
 	double curWeight;
 	if (find(_missingSubtreesAncestors.begin(),
 			_missingSubtreesAncestors.end(), node->next)
@@ -456,15 +456,16 @@ double Predictor::getSumBranches(nodeptr node, int depth, double * weight) const
 				localSum += pllGetBranchLength(_pllTree, node, i);
 			}
 		}
+
 		curWeight = computeWeight(depth * WMOD);
 		ratio = (_pllPartitions->numberOfPartitions - 1) * pllGetBranchLength(_pllTree, node, _partitionNumber)/localSum;
-		cout << setw(5) << right << node->number << " - weight: " << curWeight << " ratio: "
+		cout << setw(5) << right << node->number << setprecision(4) << " - weight: " << curWeight << " ratio: "
 				<< ratio << endl;
 		ratio *= curWeight;
 
 		if ((unsigned int) node->number > numberOfTaxa) {
 			/* inspect children */
-			double child1W = 0.0d, child2W = 0.0d;
+			double child1W = 0.0, child2W = 0.0;
 			childrenSum += getSumBranches(node->next->back, depth+1, &child1W);
 			childrenSum += getSumBranches(node->next->next->back, depth+1, &child2W);
 			*weight += child1W + child2W;
@@ -559,11 +560,12 @@ void Predictor::predictMissingSequences( const pllAlignmentData * originalSequen
 				nodeptr startingNode = _missingSubtreesAncestors[0];
 
 				cout << "Branch length scaler:" << endl;
-				double cumWeight = 0.0d;
+				double cumWeight = 0.0, weight = 0.0;
 				_branchLengthScaler = getSumBranches(startingNode->next->back, 0,
 						&cumWeight);
 				_branchLengthScaler += getSumBranches(
-						startingNode->next->next->back, 0, &cumWeight);
+						startingNode->next->next->back, 0, &weight);
+				cumWeight += weight;
 				_branchLengthScaler /= cumWeight;
 			}
 			cout << "Applying branch length scaler " << _branchLengthScaler << endl << endl;
@@ -572,7 +574,7 @@ void Predictor::predictMissingSequences( const pllAlignmentData * originalSequen
 			nodeptr startingNode = _missingSubtreesAncestors[0];
 
 			cout << "Branch length scaler:" << endl;
-			double cumWeight = 0.0d;
+			double cumWeight = 0.0;
 			getBranches(startingNode->next->back, 0, &cumWeight, _scalers);
 			getBranches(startingNode->next->next->back, 0, &cumWeight, _scalers);
 			cout << endl;

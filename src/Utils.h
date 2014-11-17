@@ -84,7 +84,8 @@ public:
 	/**
 	 * @brief Compare equality of 2 float values
 	 *
-	 * @param v1,v2 values to compare
+	 * @param v1 first value to compare
+	 * @param v2 second value to compare
 	 *
 	 * @return true, if both differ less than an epsilon value
 	 */
