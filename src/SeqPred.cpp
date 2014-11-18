@@ -16,7 +16,7 @@
 using namespace std;
 
 void optimizeModelParameters(pllInstance *,	partitionList *);
-void exit_with_usage(char *);
+void exit_with_usage(char *) __attribute__ ((noreturn));
 
 void optimizeModelParameters(pllInstance * pllTree,
 		partitionList * pllPartitions) {
@@ -217,11 +217,11 @@ int main(int argc, char * argv[]) {
 #ifdef TEST_SIM
 			originalfile = optarg;
 			originalFileDefined = true;
+			break;
 #else
 			cerr << "[ERROR] -I argument is not available." << endl;
 			exit(EX_IOERR);
 #endif
-			break;
 		case 't':
 			treefile = optarg;
 			break;
@@ -233,10 +233,10 @@ int main(int argc, char * argv[]) {
 			outputfile = optarg;
 			break;
 		case 'r':
-			numberOfReplicates = atoi(optarg);
+			numberOfReplicates = (unsigned int) atoi(optarg);
 			break;
 		case 's':
-			randomNumberSeed = atoi(optarg);
+			randomNumberSeed = (unsigned int) atoi(optarg);
 			break;
 		default:
 			exit(EX_IOERR);
@@ -368,7 +368,7 @@ int main(int argc, char * argv[]) {
 	cout << setfill('-') << setw(60) << "" << setfill(' ') << endl;
 	char header[60];
 	sprintf(header, " Sequence predictor v%s", PACKAGE_VERSION);
-	int padding = 30 + (strlen(header) / 2);
+	int padding = (int) (30 + (strlen(header) / 2));
 	cout << setw(padding) << header << endl;
 	cout << setfill('-') << setw(60) << "" << setfill(' ') << endl;
 	cout << setw(20) << left << "Input alignment:" << inputfile << endl;
@@ -459,8 +459,8 @@ int main(int argc, char * argv[]) {
 		if (numberOfReplicates > 1) {
 			cout << "Replicate " << rep+1 << " of " << numberOfReplicates << endl;
 		}
-		for (int currentPartition = 0;
-				currentPartition < pllPartitions->numberOfPartitions;
+		for (unsigned int currentPartition = 0;
+				currentPartition < (unsigned int) pllPartitions->numberOfPartitions;
 				currentPartition++) {
 			seqpred::Predictor sequencePredictor(pllTree, pllPartitions,
 					pllAlignment, currentPartition);

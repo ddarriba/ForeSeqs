@@ -9,6 +9,7 @@
 #include "Utils.h"
 
 #include <cassert>
+#include <alloca.h>
 
 using namespace std;
 
@@ -41,27 +42,28 @@ Model& Model::operator=(const Model& other) {
 
 double Model::computeFracchange( void ) const {
 
-	int numberOfStates = _pllPartitionInfo->states;
-	assert ((unsigned int)numberOfStates == _frequencies.size());
-	assert ((unsigned int) (numberOfStates * (numberOfStates-1))/2 == _substRates.size());
+	unsigned int numberOfStates = (unsigned int)_pllPartitionInfo->states;
+	assert (numberOfStates == _frequencies.size());
+	assert ((numberOfStates * (numberOfStates-1))/2 == _substRates.size());
 
 	/* convert rates into matrix */
-	double r[numberOfStates][numberOfStates];
-	int i = 0;
-	for (int j = 0; j < (numberOfStates-1); j++)
-		for (int k = j + 1; k < numberOfStates; k++)
-			r[j][k] = _substRates[i++];
-	for (int j = 0; j < numberOfStates; j++) {
-		r[j][j] = 0.0;
-		for (int k = 0; k < j; k++)
-			r[j][k] = r[k][j];
+	double * r;
+	r = (double *) alloca(numberOfStates * numberOfStates * sizeof(double));
+	unsigned int i = 0;
+	for (unsigned int j = 0; j < (numberOfStates-1); j++)
+		for (unsigned int k = j + 1; k < numberOfStates; k++)
+			r[j*numberOfStates+k] = _substRates[i++];
+	for (unsigned int j = 0; j < numberOfStates; j++) {
+		r[j*numberOfStates+j] = 0.0;
+		for (unsigned int k = 0; k < j; k++)
+			r[j*numberOfStates+k] = r[k*numberOfStates+j];
 	}
 
 	/* evaluate fracchange */
 	double fracchange = 0.0;
-	for (int j = 0; j < numberOfStates; j++)
-		for (int k = 0; k < numberOfStates; k++)
-			fracchange += _frequencies[j] * r[j][k] * _frequencies[k];
+	for (unsigned int j = 0; j < numberOfStates; j++)
+		for (unsigned int k = 0; k < numberOfStates; k++)
+			fracchange += _frequencies[j] * r[j*numberOfStates+k] * _frequencies[k];
 	return fracchange;
 
 }

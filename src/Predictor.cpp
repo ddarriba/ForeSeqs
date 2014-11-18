@@ -16,17 +16,18 @@
 #include <cstring>
 #include <cassert>
 #include <cmath>
+#include <alloca.h>
 
 using namespace std;
 
 namespace seqpred {
 
 Predictor::Predictor(pllInstance * tree, partitionList * partitions,
-		pllAlignmentData * phylip, int partitionNumber) :
+		pllAlignmentData * phylip, unsigned int partitionNumber) :
 		_pllTree(tree), _pllPartitions(partitions), _pllAlignment(phylip),
 				_partitionNumber(partitionNumber), _numberOfStates(0),
-				_start(partitions->partitionData[partitionNumber]->lower),
-				_end(partitions->partitionData[partitionNumber]->upper),
+				_start((unsigned int)partitions->partitionData[partitionNumber]->lower),
+				_end((unsigned int)partitions->partitionData[partitionNumber]->upper),
 				_partitionLength(_end - _start), _catToSite(0),
 				_missingSubtreesAncestors(),
 				_missingSequences(), _missingPartsCount(0),
@@ -48,7 +49,8 @@ Predictor::Predictor(pllInstance * tree, partitionList * partitions,
 	if (_missingSequences.size()) {
 		if (categoriesMode != CAT_AVERAGE) {
 			_catToSite = (short *) calloc((size_t) _partitionLength, sizeof(short));
-			unsigned int catToSiteCount[numberOfRateCategories];
+			unsigned int * catToSiteCount;
+			catToSiteCount = (unsigned int *) alloca (numberOfRateCategories*sizeof (unsigned int));
 			for (unsigned int k = 0; k < numberOfRateCategories; k++) {
 				catToSiteCount[k] = 0;
 			}
@@ -59,7 +61,8 @@ Predictor::Predictor(pllInstance * tree, partitionList * partitions,
 					catToSiteCount[_catToSite[i]]++;
 				}
 			} else {
-				double gammaRates[numberOfRateCategories];
+				double * gammaRates;
+				gammaRates = (double *) alloca (numberOfRateCategories * sizeof(double));
 				double * perSiteLikelihoods = (double *) malloc(
 						(size_t) _partitionLength * sizeof(double));
 				catToSiteCount[0] = _partitionLength;
@@ -252,7 +255,7 @@ void Predictor::mutateSequence(char * currentSequence,
 		const char * ancestralSequence, double branchLength) {
 
 	char * seqPtr;
-	double gammaRates[numberOfRateCategories];
+	double * gammaRates = (double *) alloca (numberOfRateCategories * sizeof(double));
 	int substitutionsCount = 0;
 
 	if ( _partitionLength != strlen(ancestralSequence) ) {
@@ -284,7 +287,7 @@ void Predictor::mutateSequence(char * currentSequence,
 	switch (categoriesMode) {
 	case CAT_AVERAGE:
 	{
-		double averageMatrix[_numberOfStates * _numberOfStates];
+		double * averageMatrix = (double *) alloca (_numberOfStates * _numberOfStates * sizeof(double));
 		for (unsigned int i = 0; i < _numberOfStates * _numberOfStates; i++) {
 			averageMatrix[i] = 0.0;
 			for (unsigned int j = 0; j < numberOfRateCategories; j++) {

@@ -29,7 +29,8 @@ public:
 	/**
 	* @brief Construct a new Predictor for a single partition
 	*/
-	Predictor(pllInstance * tree, partitionList * partitions, pllAlignmentData * phylip, int partitionNumber);
+	Predictor(pllInstance * tree, partitionList * partitions, pllAlignmentData * phylip,
+			unsigned int partitionNumber);
 	Predictor(const Predictor&);
 	virtual ~Predictor( void );
 
@@ -46,8 +47,8 @@ public:
 	/**
 	 * @brief Get the number of taxa with missing sequences
 	 */
-	int getNumberOfMissingSequences(void) const {
-		return _missingSequences.size();
+	unsigned int getNumberOfMissingSequences(void) const {
+		return (unsigned int) _missingSequences.size();
 	}
 
 	/**

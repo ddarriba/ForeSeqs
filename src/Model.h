@@ -34,7 +34,7 @@ public:
 	/**
 	 * @brief Get the randomly selected state according to a probability matrix
 	 *
-	 * @param[int] pMatrix the P matrix
+	 * @param[in] pMatrix the P matrix
 	 * @return the randomly selected char
 	 */
 	virtual char getState(const double * pMatrix) const = 0;
