@@ -527,7 +527,7 @@ void Predictor::evolveNode(const nodeptr node, const char * ancestralSequence) {
 		evolveNode(node->next->next->back, currentSequence);
 	} else {
 		/* set the new sequence */
-		memcpy(&(_pllAlignment->sequenceData[node->number][_start]), currentSequence, _partitionLength);
+		memcpy(&(_pllAlignment->sequenceData[seqIndexTranslate[node->number]][_start]), currentSequence, _partitionLength);
 		/* remove visited taxon */
 		_missingSequences.erase(remove(_missingSequences.begin(), _missingSequences.end(), node->number), _missingSequences.end());
 	}
@@ -594,7 +594,6 @@ void Predictor::predictMissingSequences( const pllAlignmentData * originalSequen
 	/* loop over all possible subtrees with missing data */
 	unsigned int nextAncestor = 0;
 	while (_missingSequences.size()) {
-
 		cout << "Predicting subtree" << endl;
 		assert(nextAncestor < _missingSubtreesAncestors.size());
 		nodeptr ancestor = _missingSubtreesAncestors[nextAncestor++];
@@ -650,10 +649,11 @@ void Predictor::predictMissingSequences( const pllAlignmentData * originalSequen
 						== DT_NUCLEIC) {
 					for (size_t j = _start; j < _end; j++) {
 						bool validForComp;
-						simCount += Utils::compareNucStates(_pllAlignment->sequenceData[seq][j],
-								originalSequence->sequenceData[seq][j], &validForComp);
+						simCount += Utils::compareNucStates(_pllAlignment->sequenceData[seqIndexTranslate[seq]][j],
+								originalSequence->sequenceData[seqIndexTranslate[seq]][j], &validForComp);
 						seqLen += validForComp;
 					}
+					cout << "Comparing sequence " << taxaNames[seq] << ": " << simCount << " valid sites." << endl;
 					_seqSimilarity += simCount/seqLen/missingSequencesCopy.size();
 				}
 				cout << "Similarity in sequence " << seq <<"/" << _pllPartitions->partitionData[_partitionNumber]->partitionName << ": " << 100*simCount/seqLen << "%" << endl;

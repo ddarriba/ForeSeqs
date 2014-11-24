@@ -15,7 +15,7 @@
 #include <cstdio>
 #include <map>
 
-//#define TEST_SIM 1
+#define TEST_SIM 1
 
 #define EPSILON 1e-6		  /** epsilon for comparing floating point values */
 
@@ -117,6 +117,7 @@ extern unsigned int numberOfRateCategories;	/** Number of gamma rate categories 
 extern unsigned int numberOfTaxa;			/* Number of taxa */
 extern unsigned int sequenceLength;			/* Number of sites (aa/bp) */
 extern char ** taxaNames;					/* Name list of taxa */
+extern unsigned int * seqIndexTranslate;		/* Array for translating indexes in PLL instance to PLL alignment */
 
 } /* namespace seqpred */
 

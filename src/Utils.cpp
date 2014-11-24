@@ -22,6 +22,7 @@ CatMode categoriesMode = CAT_ESTIMATE;
 unsigned int numberOfRateCategories = 4;
 unsigned int numberOfTaxa, sequenceLength;
 char ** taxaNames;
+unsigned int * seqIndexTranslate;
 
 double Utils::genRand(void) {
 	return rand() * (1.0 / INT_MAX);

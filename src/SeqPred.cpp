@@ -12,6 +12,7 @@
 #include <cmath>
 #include <cassert>
 #include <getopt.h>
+#include <time.h>
 
 using namespace std;
 
@@ -130,6 +131,8 @@ void exit_with_usage(char * command) {
 int main(int argc, char * argv[]) {
 
 	bool partitionsFileDefined = false;
+
+	time_t startTime, currentTime;
 
 	pllQueue * pllPartsQueue = 0;
 	pllInstance * pllTree = 0;
@@ -415,6 +418,7 @@ int main(int argc, char * argv[]) {
 	}
 
 	/* Start! */
+	startTime = time(NULL);
 
 	pllNewickTree * nt;
 	nt = pllNewickParseFile(treefile.c_str());
@@ -437,6 +441,17 @@ int main(int argc, char * argv[]) {
 	pllLoadAlignment(pllTree, pllAlignment, pllPartitions);
 	seqpred::taxaNames = pllTree->nameList;
 
+	/* build translation array */
+	seqpred::seqIndexTranslate = (unsigned int *) malloc ((seqpred::numberOfTaxa+1)*sizeof(unsigned int));
+	for (unsigned int i=1; i<=seqpred::numberOfTaxa; i++) {
+
+		for (unsigned int j=1; j<=seqpred::numberOfTaxa; j++) {
+			if (!strcmp(pllAlignment->sequenceLabels[j], pllTree->tipNames[i])) {
+				seqpred::seqIndexTranslate[i] = j;
+			}
+		}
+	}
+
 	cout << "Initializing model " << endl;
 	pllInitModel(pllTree, pllPartitions);
 
@@ -452,6 +467,8 @@ int main(int argc, char * argv[]) {
 	cout << "TRACE: Tree=" << pllTree->tree_string << endl;
 #endif
 
+	currentTime = time(NULL);
+	cout << "Initiial inference done. It took " << currentTime - startTime << " seconds." << endl << endl;
 
 	cout << "Predicting sequences..." << endl << endl;
 	for (unsigned int rep = 0; rep < numberOfReplicates; rep++) {
@@ -481,7 +498,9 @@ int main(int argc, char * argv[]) {
 			sequencePredictor.predictMissingSequences();
 #endif
 		}
-		cout << endl << "...Done!" << endl << endl;
+		currentTime = time(NULL);
+		cout << endl << "Prediction done. It took " << currentTime - startTime << " seconds." << endl << endl;
+
 	#ifdef PRINT_TRACE
 		pllAlignmentDataDumpConsole(pllAlignment);
 	#endif
@@ -502,6 +521,8 @@ int main(int argc, char * argv[]) {
 				pllAlignmentDataDestroy(originalAlignment);
 			}
 #endif
+
+	free(seqpred::seqIndexTranslate);
 	pllAlignmentDataDestroy(pllAlignment);
 	pllPartitionsDestroy(pllTree, &pllPartitions);
 	pllDestroyInstance(pllTree);
