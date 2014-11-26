@@ -20,6 +20,8 @@
 
 using namespace std;
 
+#define MIN_BR_LEN 0.0001
+
 namespace seqpred {
 
 Predictor::Predictor(pllInstance * tree, partitionList * partitions,
@@ -391,6 +393,10 @@ double Predictor::computeBranchLength(const nodeptr node) const {
 		break;
 	}
 	}
+
+	/* branch length correction */
+	branchLength = max(branchLength, MIN_BR_LEN);
+
 	return branchLength;
 }
 
