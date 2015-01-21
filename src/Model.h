@@ -8,7 +8,7 @@
 #ifndef MODEL_H_
 #define MODEL_H_
 
-#include "pll.h"
+#include "pll/pll.h"
 
 #include <map>
 #include <vector>
@@ -28,16 +28,25 @@ public:
 	 *
 	 * @param[out] pMatrix the (already allocated) P matrix
 	 * @param[in] branchLength the branch length
+	 * @param[in] cummulative if true, the matrix columns are cummulative
 	 */
-	virtual void setMatrix(double * pMatrix, double branchLength) const = 0;
+	virtual void setMatrix(double * pMatrix, double branchLength, bool cummulative = true) const = 0;
 
 	/**
 	 * @brief Get the randomly selected state according to a probability matrix
 	 *
-	 * @param[in] pMatrix the P matrix
+	 * @param[in] pMatrix the commulative P matrix
 	 * @return the randomly selected char
 	 */
 	virtual char getState(const double * pMatrix) const = 0;
+
+	/**
+	 * @brief Get the most probable state according to a probability array
+	 *
+	 * @param[in] probArray the probability array
+	 * @return the randomly selected char
+	 */
+	virtual char getMostProbableState(const double * probArray) const = 0;
 
 	/**
 	 * @brief Get the index for a state character

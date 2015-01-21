@@ -18,6 +18,8 @@
 #include <cmath>
 #include <alloca.h>
 
+#include <cblas.h>
+
 using namespace std;
 
 #define MIN_BR_LEN 0.0001
@@ -253,6 +255,7 @@ nodeptr Predictor::findMissingDataAncestor( nodeptr startingNode ) const {
 	return 0;
 }
 
+
 void Predictor::mutateSequence(char * currentSequence,
 		const char * ancestralSequence, double branchLength) {
 
@@ -273,7 +276,7 @@ void Predictor::mutateSequence(char * currentSequence,
 	/* start mutating the ancestral sequence */
 	strcpy(currentSequence, ancestralSequence);
 
-	pllMakeGammaCats(_pllPartitions->partitionData[_partitionNumber]->alpha,gammaRates, numberOfRateCategories, false);
+	pllMakeGammaCats(_pllPartitions->partitionData[_partitionNumber]->alpha, gammaRates, numberOfRateCategories, false);
 
 	seqPtr = currentSequence;
 
@@ -506,6 +509,168 @@ double Predictor::getSumBranches(nodeptr node, int depth, double * weight) const
 //	return scaler;
 //}
 
+void Predictor::evolveNode(const nodeptr node, const double * ancestralProbabilities, const double * ancestralPMatrix) {
+
+#ifdef PRINT_TRACE
+	cout << "TRACE: Mutating node " << node->number << endl;
+#endif
+#ifdef PRINT_ANCESTRAL
+	if (ancestralSequence) {
+		cout << "INFO: Ancestral: ";
+	    Utils::printSequence(ancestralSequence);
+	}
+#endif
+	unsigned int n = _partitionLength;
+	double branchLength = computeBranchLength(node);
+	cout << "  - Estimated branch length for node " << setprecision(5) << node->number << " (partition " << _pllPartitions->partitionData[_partitionNumber]->partitionName << ") = " << branchLength << endl;
+
+	if (node->number > _pllTree->mxtips) {
+		double * currentPMatrix = (double *) malloc(
+				(size_t) (numberOfRateCategories * _numberOfStates
+						* _numberOfStates) * sizeof(double *));
+		mutatePMatrix(currentPMatrix, ancestralPMatrix, branchLength);
+
+		evolveNode(node->next->back, ancestralProbabilities, currentPMatrix);
+		evolveNode(node->next->next->back, ancestralProbabilities, currentPMatrix);
+
+		free(currentPMatrix);
+	} else {
+		/* compute the new probability matrix */
+		/* construct the new marginal probabilities matrix */
+	//	void cblas_dgemm(const enum CBLAS_ORDER Order, const enum CBLAS_TRANSPOSE TransA, const enum CBLAS_TRANSPOSE TransB,
+	//	                 const int M, const int N, const int K,
+	//	                 const double alpha, const double *A, const int lda
+	//	                 const double *B, const int ldb,
+	//	                 const double beta, double *C, const int ldc);
+		// Multiply P' x M
+
+		double * currentProbabilities = (double *) malloc((size_t) numberOfRateCategories * _numberOfStates * n * sizeof(double));
+		for (int cat = 0; cat < (int)numberOfRateCategories; cat++) {
+			cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans,
+				n, _numberOfStates, _numberOfStates,
+				1.0, ancestralProbabilities, _numberOfStates,
+				&ancestralPMatrix[cat * _numberOfStates* _numberOfStates], _numberOfStates,
+				0.0, &currentProbabilities[cat * _numberOfStates * n], _numberOfStates);
+
+			if (USE_FIXED_ANCESTRAL) {
+				double * M = &currentProbabilities[cat * _numberOfStates * n];
+				for (unsigned int i = 0; i < n; i++) {
+					double sum = 0.0;
+					for (unsigned int j = 0; j < _numberOfStates; j++) {
+						int nextIndex = _numberOfStates * i + j;
+						sum += M[nextIndex];
+					}
+					assert(Utils::floatEquals(sum, 1.0));
+				}
+			} else {
+				/* Make M matrix cummulative */
+				double * M = &currentProbabilities[cat * _numberOfStates * n];
+				for (unsigned int i = 0; i < n; i++) {
+					for (unsigned int j = 1; j < _numberOfStates; j++) {
+						int nextIndex = _numberOfStates * i + j;
+						M[nextIndex] += M[nextIndex - 1];
+					}
+					assert(
+							Utils::floatEquals(M[_numberOfStates * (i + 1) - 1],
+									1.0));
+				}
+			}
+		}
+
+		/* draw random ancestral states */
+		char * ancestralSequence = (char *) malloc(n + 1);
+		switch (categoriesMode) {
+		case CAT_AVERAGE: {
+			cerr << "Not implemented yet" << endl;
+			exit(EX_UNIMPLEMENTED);
+			break;
+		}
+		case CAT_RANDOM:
+		case CAT_ESTIMATE: {
+
+			short * siteCatPtr = _catToSite;
+			char * seqPtr = ancestralSequence;
+			if (USE_FIXED_ANCESTRAL) {
+				for (unsigned int i = 0; i < _partitionLength; i++) {
+					char newState = _currentModel->getMostProbableState(
+							&currentProbabilities[(*siteCatPtr)
+									* _numberOfStates * _partitionLength
+									+ i * _numberOfStates]);
+					*seqPtr = newState;
+					seqPtr++;
+					siteCatPtr++;
+				}
+			} else {
+				for (unsigned int i = 0; i < _partitionLength; i++) {
+					char newState = _currentModel->getState(
+							&currentProbabilities[(*siteCatPtr)
+									* _numberOfStates * _partitionLength
+									+ i * _numberOfStates]);
+					*seqPtr = newState;
+					seqPtr++;
+					siteCatPtr++;
+				}
+			}
+			break;
+		}
+		}
+		ancestralSequence[n] = '\0';
+
+		/* compute the new sequence from the probabilities */
+		char * currentSequence = (char *) malloc (n + 1);
+		mutateSequence(currentSequence, ancestralSequence, branchLength);
+		free(ancestralSequence);
+
+		/* set the new sequence */
+		memcpy(&(_pllAlignment->sequenceData[seqIndexTranslate[node->number]][_start]), currentSequence, _partitionLength);
+		/* remove visited taxon */
+		_missingSequences.erase(remove(_missingSequences.begin(), _missingSequences.end(), node->number), _missingSequences.end());
+
+		free(currentSequence);
+		free(currentProbabilities);
+	}
+}
+
+void Predictor::mutatePMatrix(double * currentPMatrix,
+		const double * ancestralPMatrix, double branchLength) {
+
+	double * gammaRates = (double *) alloca (numberOfRateCategories * sizeof(double));
+
+	pllMakeGammaCats(_pllPartitions->partitionData[_partitionNumber]->alpha, gammaRates, numberOfRateCategories, false);
+
+	/* construct and validate P matrix */
+	double matrix[numberOfRateCategories][_numberOfStates*_numberOfStates];
+	for (unsigned int i = 0; i < numberOfRateCategories; i++) {
+		_currentModel->setMatrix(matrix[i], gammaRates[i] * branchLength, false);
+
+		/* validation */
+		for (unsigned int j = 0; j < _numberOfStates; j++) {
+			double sum = 0.0;
+			for (unsigned int k = 0; k < _numberOfStates; k++) {
+				sum += matrix[i][j*_numberOfStates + k];
+			}
+			assert(Utils::floatEquals(sum, 1.0));
+		}
+	}
+
+	if (ancestralPMatrix) {
+		/* multiply P matrices */
+		int n = _numberOfStates;
+		for (int cat = 0; cat < (int) numberOfRateCategories; cat++) {
+			cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, n, n, n, 1.0,
+					matrix[cat], n, &ancestralPMatrix[cat * n * n], n, 0.0,
+					&currentPMatrix[cat * n * n], n);
+		}
+	} else {
+		/* directly set the P matrix */
+		for (unsigned int i = 0; i < numberOfRateCategories; i++) {
+			memcpy(&currentPMatrix[i * _numberOfStates * _numberOfStates],
+					matrix[i],
+					_numberOfStates * _numberOfStates * sizeof(double));
+		}
+	}
+}
+
 void Predictor::evolveNode(const nodeptr node, const char * ancestralSequence) {
 
 #ifdef PRINT_TRACE
@@ -609,7 +774,7 @@ void Predictor::predictMissingSequences( const pllAlignmentData * originalSequen
 	#ifdef PRINT_TRACE
 		cout << "TRACE: Updating partials for " << startNode->number << endl;
 	#endif
-		pllUpdatePartialsAncestral(_pllTree, _pllPartitions, startNode);
+		pllUpdatePartialsAncestral(_pllTree, _pllPartitions, startNode, false);
 	#ifdef PRINT_TRACE
 		cout << "TRACE: Generating ancestral for " << startNode->number << endl;
 	#endif
@@ -627,22 +792,53 @@ void Predictor::predictMissingSequences( const pllAlignmentData * originalSequen
 		char * ancestral = (char *) malloc( (size_t) sequenceLength + 1);
 		double * probs = (double *) malloc(
 				(size_t) probsSize * sizeof(double));
-		pllGetAncestralState(_pllTree, _pllPartitions, startNode, probs, ancestral);
-		free (probs);
-
-		/* extract the ancestral for the partition */
-		char * partAncestral = (char *) malloc(_partitionLength + 1);
-		memcpy(partAncestral, &(ancestral[_start]), _partitionLength);
-		partAncestral[_partitionLength] = '\0';
-		free (ancestral);
+		pllGetAncestralState(_pllTree, _pllPartitions, startNode, probs, ancestral, false);
 
 	#ifdef DEBUG
 		printNodes(_pllTree, _pllPartitions);
 		printBranchLengths(_pllTree, _pllPartitions);
 	#endif
 
-		evolveNode(ancestor->back, partAncestral);
-		free(partAncestral);
+		switch (predictionMode) {
+		case PRED_ANCSEQ:
+		{
+			/* discard MAP vector */
+			free (probs);
+
+			/* extract the ancestral for the partition */
+			char * partAncestral = (char *) malloc(_partitionLength + 1);
+			memcpy(partAncestral, &(ancestral[_start]), _partitionLength);
+			partAncestral[_partitionLength] = '\0';
+			free(ancestral);
+
+			evolveNode(ancestor->back, partAncestral);
+
+			free(partAncestral);
+			break;
+		}
+		case PRED_MAP:
+			/* discard ancestral sequence */
+			free(ancestral);
+
+			/* extract the ancestral for the partition */
+			size_t partProbsSize = (probsSize/sequenceLength) * _partitionLength;
+			double * probsAncestral = (double *) malloc(partProbsSize * sizeof(double));
+			memcpy(probsAncestral, &(probs[_start * _numberOfStates]), partProbsSize * sizeof(double));
+			free (probs);
+
+			/* validate */
+//			for (int i=0; i<_partitionLength; i++) {
+//				for (int j=0; j<_numberOfStates; j++) {
+//					cout << probsAncestral[i*_numberOfStates + j] << " ";
+//				}
+//				cout << endl;
+//			}
+
+			evolveNode(ancestor->back, probsAncestral);
+			free (probsAncestral);
+
+			break;
+		}
 
 		if (originalSequence) {
 			/* compute similarity */
@@ -690,7 +886,7 @@ void Predictor::predictAllSequences( void ) {
 		char * ancestral = (char *) malloc( (size_t) sequenceLength + 1);
 		double * probs = (double *) malloc(
 				(size_t) probsSize * sizeof(double));
-		pllGetAncestralState(_pllTree, _pllPartitions, ancestor, probs, ancestral);
+		pllGetAncestralState(_pllTree, _pllPartitions, ancestor, probs, ancestral, false);
 		free (probs);
 
 		/* extract the ancestral for the partition */

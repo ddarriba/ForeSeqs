@@ -1,8 +1,8 @@
 #include "Predictor.h"
 #include "Utils.h"
 
-#include "pll.h"
 #include "config.h"
+#include "pll/pll.h"
 
 #include <iostream>
 #include <iomanip>
@@ -83,14 +83,14 @@ void exit_with_usage(char * command) {
 			command);
 	printf("\n\n");
 	printf("  -b, --branches    branchLengthsMode Set the mode for stealing the branch lengths (default: a)\n");
-	printf("      --branches    a (average)       Average of branch lengths for other partitions\n");
-	printf("      --branches    d (draw)          Draw a branch length from an inferred distribution\n");
-	printf("      --branches    s (scale)         Compute an average branch-length scaler\n");
+	printf("      --branches a    (average)       Average of branch lengths for other partitions\n");
+	printf("      --branches d    (draw)          Draw a branch length from an inferred distribution\n");
+	printf("      --branches s    (scale)         Compute an average branch-length scaler");
 	printf("\n\n");
 	printf("  -c, --categories  categoriesMode    Set the mode for selecting the per-site category (default: r)\n");
-	printf("      --categories  r (random)        Random per-site category for each sequence\n");
-	printf("      --categories  e (estimate)      Estimated from other partitions\n");
-	printf("      --categories  a (average)       Average of all categories\n");
+	printf("      --categories r  (random)        Random per-site category for each sequence\n");
+	printf("      --categories e  (estimate)      Estimated from other partitions\n");
+	printf("      --categories a  (average)       Average of all categories");
 	printf("\n\n");
 	printf("  -h, --help                           Shows this help message");
 	printf("\n\n");
@@ -104,6 +104,10 @@ void exit_with_usage(char * command) {
 #endif
 	printf(
 			"  -o, --output     outputFileName      Set the output filename (default: [inputFile].predicted)");
+	printf("\n\n");
+	printf("  -p, --prior      predictionPrior     Set the prior used for predicting the sequences (default: s)\n");
+	printf("      --prior s      (sequences)       Predict from the ancestral most likely sequence\n");
+	printf("      --prior m      (MAPs)            Predict from the marginal ancestral probabilities (MAPs)");
 	printf("\n\n");
 	printf(
 			"  -q, --partitions partitionsFileName  Set the partitions definition (PLL like)");
@@ -153,6 +157,7 @@ int main(int argc, char * argv[]) {
 			{ "help", no_argument, 0, 'h' },
 			{ "input", required_argument, 0, 'i' },
 			{ "original", required_argument, 0, 'I' },
+			{ "prior", required_argument, 0, 'p' },
 			{ "tree", required_argument, 0, 't' },
 			{ "partitions", required_argument, 0, 'q' },
 			{ "replicates", required_argument, 0, 'r' },
@@ -161,7 +166,7 @@ int main(int argc, char * argv[]) {
 			{ 0, 0, 0, 0 } };
 
 	int opt = 0, long_index = 0;
-	while ((opt = getopt_long(argc, argv, "b:c:hi:I:t:q:r:s:o:", long_options,
+	while ((opt = getopt_long(argc, argv, "b:c:hi:I:t:q:r:s:o:p:", long_options,
 			&long_index)) != -1) {
 		switch (opt) {
 		case 'b':
@@ -235,6 +240,26 @@ int main(int argc, char * argv[]) {
 		case 'o':
 			outputfile = optarg;
 			break;
+		case 'p':
+		{
+			if (strlen(optarg) > 1) {
+				cerr << "[ERROR] Invalid prediction mode: " << optarg << endl;
+				exit(EX_IOERR);
+			}
+			char predMode = optarg[0];
+			switch (predMode) {
+			case 's':
+				seqpred::predictionMode = seqpred::PRED_ANCSEQ;
+				break;
+			case 'm':
+				seqpred::predictionMode = seqpred::PRED_MAP;
+				break;
+			default:
+				cerr << "[ERROR] Invalid prediction mode: " << optarg << endl;
+				exit(EX_IOERR);
+			}
+			break;
+		}
 		case 'r':
 			numberOfReplicates = (unsigned int) atoi(optarg);
 			break;
@@ -438,13 +463,15 @@ int main(int argc, char * argv[]) {
 	pllNewickParseDestroy(&nt);
 
 	cout << endl << "Loading alignment " << endl;
-	pllLoadAlignment(pllTree, pllAlignment, pllPartitions);
+	if (!pllLoadAlignment(pllTree, pllAlignment, pllPartitions)) {
+		cerr << "Error!" << endl;
+		exit(1);
+	}
 	seqpred::taxaNames = pllTree->nameList;
 
 	/* build translation array */
 	seqpred::seqIndexTranslate = (unsigned int *) malloc ((seqpred::numberOfTaxa+1)*sizeof(unsigned int));
 	for (unsigned int i=1; i<=seqpred::numberOfTaxa; i++) {
-
 		for (unsigned int j=1; j<=seqpred::numberOfTaxa; j++) {
 			if (!strcmp(pllAlignment->sequenceLabels[j], pllTree->tipNames[i])) {
 				seqpred::seqIndexTranslate[i] = j;

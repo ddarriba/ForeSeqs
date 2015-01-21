@@ -18,6 +18,8 @@ namespace seqpred {
 
 BLMode branchLengthsMode = BL_AVERAGE;
 CatMode categoriesMode = CAT_ESTIMATE;
+PredMode predictionMode = PRED_ANCSEQ;
+
 /* Number of categories hardcoded to 4 */
 unsigned int numberOfRateCategories = 4;
 unsigned int numberOfTaxa, sequenceLength;

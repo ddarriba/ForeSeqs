@@ -93,7 +93,21 @@ char ProteinModel::getState(const double * pMatrix) const {
 	return (_charStates[j]);
 }
 
-void ProteinModel::setMatrix(double * matrix, double branchLength) const {
+char ProteinModel::getMostProbableState(const double * probArray) const {
+	int maxPos = -1;
+	double max = 0.0;
+	const double *P = probArray;
+	for (int j = 0; j < NUM_AA; j++) {
+		if (*P > max) {
+			max = *P;
+			maxPos = j;
+		}
+		P++;
+	}
+	return (_charStates[pow(2,maxPos)]);
+}
+
+void ProteinModel::setMatrix(double * matrix, double branchLength, bool cummulative) const {
 
 	int i, j, k;
 	double expt[NUM_AA];
@@ -126,16 +140,26 @@ void ProteinModel::setMatrix(double * matrix, double branchLength) const {
 		}
 	}
 
-	/* the rows are cumulative to help with picking one using
-	 a random number */
-	for (int i = 0; i < NUM_AA; i++) {
-		for (int j = 1; j < NUM_AA; j++) {
-			int nextIndex = NUM_AA * i + j;
-			matrix[nextIndex] += matrix[nextIndex - 1];
+	if (cummulative) {
+		/* the rows are cumulative to help with picking one using
+		 a random number */
+		for (int i = 0; i < NUM_AA; i++) {
+			for (int j = 1; j < NUM_AA; j++) {
+				int nextIndex = NUM_AA * i + j;
+				matrix[nextIndex] += matrix[nextIndex - 1];
+			}
+			assert(Utils::floatEquals(matrix[NUM_AA * (i + 1) - 1], 1.0));
 		}
-		assert(Utils::floatEquals(matrix[NUM_AA * (i + 1) - 1], 1.0));
+	} else {
+		/* the matrix rows sum to 1.0 */
+		for (int i = 0; i < NUM_AA; i++) {
+			double sum = 0.0;
+			for (int j = 0; j < NUM_AA; j++) {
+				sum += matrix[NUM_AA * i + j];
+			}
+			assert(Utils::floatEquals(sum, 1.0));
+		}
 	}
-
 }
 
 } /* namespace seqpred */

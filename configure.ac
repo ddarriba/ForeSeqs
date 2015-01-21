@@ -15,9 +15,9 @@ AC_CONFIG_AUX_DIR(config)
 AM_CONFIG_HEADER(config.h)
 AM_INIT_AUTOMAKE([dist-bzip2])
 
-CFLAGS="$CFLAGS -I${PWD}/libpll/include"
-CXXFLAGS="$CXXFLAGS -I${PWD}/libpll/include"
-LDFLAGS="$LDFLAGS -L${PWD}/libpll/lib"
+# CFLAGS="$CFLAGS -I${PWD}/libpll/include"
+# CXXFLAGS="$CXXFLAGS -I${PWD}/libpll/include"
+# LDFLAGS="$LDFLAGS -L${PWD}/libpll/lib"
 
 LF_CONFIGURE_CC
 LF_CONFIGURE_CXX
@@ -35,6 +35,7 @@ AM_PROG_CC_C_O
 
 # Checks for libraries.
 AC_CHECK_LIB([m], [main])
+AC_CHECK_LIB([openblas], [cblas_daxpy])
 # AC_CHECK_LIB([pthread], [pthread_create])
 # AC_CHECK_LIB([pll-sse3-pthreads], [pllCreateInstance])
 AC_CHECK_LIB([pll-sse3], [pllCreateInstance])

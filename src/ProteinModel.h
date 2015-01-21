@@ -19,8 +19,9 @@ namespace seqpred {
 class ProteinModel: public Model {
 public:
 	ProteinModel(partitionList * pllPartitions, int partitionIndex);
-	virtual void setMatrix(double * pMatrix, double branchLength) const;
+	virtual void setMatrix(double * pMatrix, double branchLength, bool cummulative = true) const;
 	virtual char getState(const double * pMatrix) const;
+	virtual char getMostProbableState(const double * probArray) const;
 	virtual ~ProteinModel();
 private:
 

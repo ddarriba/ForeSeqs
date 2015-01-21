@@ -8,13 +8,14 @@
 #ifndef PREDICTOR_H_
 #define PREDICTOR_H_
 
-#include "pll.h"
+#include "pll/pll.h"
 #include "Model.h"
 
 #include <map>
 #include <vector>
 
 #define PLL_UNDEFINED_SITE 15
+#define USE_FIXED_ANCESTRAL 1
 
 namespace seqpred {
 
@@ -97,13 +98,25 @@ private:
 	*/
 	void mutateSequence ( char * currentSequence, const char * ancestralSequence, double branchLength );
 
+	void mutatePMatrix(double * currentPMatrix,
+			const double * ancestralPMatrix, double branchLength);
+
 	/**
-	* @brief Predict the sequences for a whole subtree
+	* @brief Predict the sequences for a whole subtree starting from an ancestral sequence
 	*
 	* @param node The node to evolve
 	* @param ancestralSequence The ancestral
 	*/
 	void evolveNode(const nodeptr node, const char * ancestralSequence);
+
+	/**
+	 * @brief Predict the sequences for a whole subtree starting from Marginal Ancestral Probabilities
+	 *
+	 * @param node The node to evolve
+	 * @param ancestralProbabilities The marginal ancestral probabilites
+	 * @param n The number of sites
+	 */
+	void evolveNode(const nodeptr node, const double * ancestralProbabilites, const double * ancestralPMatrix = 0);
 
 	/**
 	 * @brief Compute the branch length for a node

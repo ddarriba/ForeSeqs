@@ -8,7 +8,7 @@
 #ifndef UTILS_H_
 #define UTILS_H_
 
-#include "pll.h"
+#include "pll/pll.h"
 
 #include <vector>
 #include <iostream>
@@ -28,18 +28,26 @@ namespace seqpred {
 
 /** Data Type definition (nucleic or proteic) */
 enum DataType { DT_NUCLEIC, DT_PROTEIC};
+
 /** Mode for selecting per-site rate categories */
 enum CatMode {
 	CAT_RANDOM,		/** Random per-site category */
 	CAT_ESTIMATE,	/** Estimated from other partitions */
 	CAT_AVERAGE		/** Average of all categories */
 	};
+
 /** Mode for stealing the branch lengths */
 enum BLMode {
 	BL_AVERAGE,		/** Average among all other partitions */
 	BL_DRAW,		/** Draw a scaler from an inferred distribution */
 	BL_SCALE		/** Find an average scaler */
 	};
+
+/** Mode for predicting the sequences */
+enum PredMode {
+	PRED_ANCSEQ,	/** Predict from ancestral sequences */
+	PRED_MAP		/** Predict from Marginal Ancestral Probabilities */
+};
 
 class Utils {
 public:
@@ -113,6 +121,7 @@ public:
 
 extern BLMode branchLengthsMode;			/** Mode for stealing the branch lengths */
 extern CatMode categoriesMode;				/** Mode for selecting per-site rate categories */
+extern PredMode predictionMode;				/** Prior for predicting the sequences */
 extern unsigned int numberOfRateCategories;	/** Number of gamma rate categories */
 extern unsigned int numberOfTaxa;			/* Number of taxa */
 extern unsigned int sequenceLength;			/* Number of sites (aa/bp) */
