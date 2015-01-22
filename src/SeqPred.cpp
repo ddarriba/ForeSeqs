@@ -497,6 +497,19 @@ int main(int argc, char * argv[]) {
 	currentTime = time(NULL);
 	cout << "Initiial inference done. It took " << currentTime - startTime << " seconds." << endl << endl;
 
+	/* Find missing sequences and branches */
+	vector<vector<int> > missingSequences =  seqpred::Utils::findMissingSequences(pllTree, pllPartitions);
+	vector<vector<nodeptr> > missingBranches = seqpred::Utils::findMissingBranches(pllTree, pllPartitions, missingSequences);
+
+//		for (int i=0; i<missingBranches.size(); i++) {
+//			cout << "PARTITION " << i << "/" << missingBranches.size() << endl;
+//			cout << "  Branches: " << missingBranches[i].size() << endl;
+//			for (int j=0; j<missingBranches[i].size(); j++) {
+//				cout << "    * " << missingBranches[i][j]->number << endl;
+//			}
+//		}
+
+	/* Predict sequences */
 	cout << "Predicting sequences..." << endl << endl;
 	for (unsigned int rep = 0; rep < numberOfReplicates; rep++) {
 
@@ -507,7 +520,8 @@ int main(int argc, char * argv[]) {
 				currentPartition < (unsigned int) pllPartitions->numberOfPartitions;
 				currentPartition++) {
 			seqpred::Predictor sequencePredictor(pllTree, pllPartitions,
-					pllAlignment, currentPartition);
+					pllAlignment, currentPartition, missingSequences[currentPartition],
+					&missingBranches);
 #ifdef TEST_SIM
 			if (originalFileDefined) {
 				sequencePredictor.predictMissingSequences(originalAlignment);

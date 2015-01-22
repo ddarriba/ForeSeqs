@@ -117,6 +117,52 @@ public:
 	 * @param[out] validForComp 1, if state1 is 'a', 'c', 'g' or 't'
 	 */
 	static double compareNucStates(unsigned char state0, unsigned char state1, bool * validForComp);
+
+	/**
+	 * @brief Get the list of missing sequences for every partition
+	 *
+	 * @param[in] pllTree The tree instance
+	 * @param[in] pllPartitions The partitions description
+	 *
+	 * @return The list of missing sequences in the tree
+	 */
+	static std::vector< std::vector<int> > findMissingSequences ( pllInstance * pllTree, partitionList * pllPartitions );
+
+	/**
+	 * @brief Return the rooting node for a missing branch
+	 *
+	 * @param[in] pllTree The tree instance
+	 * @param[in,out] missingSequences The list of missing sequences. Those in the missing subtree are removed
+	 * @param[in] startingNode The missing branch for start searching
+	 * @param[out] missingBranches The list of missing branches in the missing subtree
+	 *
+	 * @return The rooting node
+	 */
+	static nodeptr findRootingNode( pllInstance * pllTree, std::vector<int> * missingSequences, nodeptr startingNode, std::vector<nodeptr> * missingBranches );
+
+	/**
+	 * @brief Get the list of missing branches for every partition
+	 *
+	 * @param[in] pllTree The tree instance
+	 * @param[in] pllPartitions The partitions description
+	 *
+	 * @return The list of missing branches in the tree
+	 */
+	static std::vector< std::vector<nodeptr> > findMissingBranches ( pllInstance * pllTree, partitionList * pllPartitions, std::vector< std::vector<int> > missingSequences );
+
+private:
+
+	/**
+	 * @brief Check if the subtree is a missing subtree
+	 *
+	 * @param[in] pllTree The tree instance
+	 * @param[in,out] missingSequences The list of missing sequences. Those in the missing subtree are removed
+	 * @param[in] node The missing branch for start searching
+	 * @param[out] missingBranches The list of missing branches in the missing subtree, sorted by node number
+	 *
+	 * @return The rooting node
+	 */
+	static boolean subtreeIsMissing( pllInstance * pllTree, std::vector<int> * missingSequences, const nodeptr node, std::vector<nodeptr> * missingBranches );
 };
 
 extern BLMode branchLengthsMode;			/** Mode for stealing the branch lengths */

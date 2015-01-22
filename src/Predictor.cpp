@@ -11,6 +11,7 @@
 #include "Utils.h"
 
 #include <iostream>
+#include <sstream>
 #include <iomanip>
 #include <algorithm>
 #include <cstring>
@@ -27,14 +28,17 @@ using namespace std;
 namespace seqpred {
 
 Predictor::Predictor(pllInstance * tree, partitionList * partitions,
-		pllAlignmentData * phylip, unsigned int partitionNumber) :
+		pllAlignmentData * phylip, unsigned int partitionNumber,
+		std::vector<int> missingSequences,
+		const std::vector< std::vector<nodeptr> > * missingBranches) :
 		_pllTree(tree), _pllPartitions(partitions), _pllAlignment(phylip),
 				_partitionNumber(partitionNumber), _numberOfStates(0),
 				_start((unsigned int)partitions->partitionData[partitionNumber]->lower),
 				_end((unsigned int)partitions->partitionData[partitionNumber]->upper),
 				_partitionLength(_end - _start), _catToSite(0),
 				_missingSubtreesAncestors(),
-				_missingSequences(), _missingPartsCount(0),
+				_missingSequences(missingSequences), _missingBranches(missingBranches),
+				_missingPartsCount(0),
 				_currentModel(0), _seqSimilarity(0),
 				_branchLengthScaler(1.0), _scalers() {
 
@@ -47,7 +51,6 @@ Predictor::Predictor(pllInstance * tree, partitionList * partitions,
 	}
 
 	/* get taxa with missing data in the partition */
-	_missingSequences = findMissingSequences();
 	_missingPartsCount = _missingSequences.size();
 
 	if (_missingSequences.size()) {
@@ -148,6 +151,7 @@ Predictor::Predictor(const Predictor& other) :
 						_partitionLength(other._partitionLength), _catToSite(other._catToSite),
 						_missingSubtreesAncestors(other._missingSubtreesAncestors),
 						_missingSequences(other._missingSequences),
+						_missingBranches(other._missingBranches),
 						_missingPartsCount(other._missingPartsCount),
 						_currentModel(other._currentModel),	_seqSimilarity(other._seqSimilarity),
 						_branchLengthScaler(other._branchLengthScaler),
@@ -183,78 +187,6 @@ Predictor& Predictor::operator=(const Predictor& other) {
 
 	return *this;
 }
-
-vector<int> Predictor::findMissingSequences( void ) const {
-	vector<int> missingSeqs;
-
-	unsigned char undefinedSite = (_numberOfStates==4)?15:22;
-	int missing;
-	for (int i = 1; i <= _pllTree->mxtips; i++) {
-		missing = 1;
-		for (unsigned int j = _start; j < _end; j++) {
-			missing &= (_pllTree->yVector[i][j] == undefinedSite);
-		}
-		if (missing) {
-			missingSeqs.push_back(i);
-		}
-	}
-
-	return missingSeqs;
-}
-
-/*
- * Search if all the taxa in a subtree have missing sequences.
- * TODO: This algorithm can be improved using a hashtable for storing the already evaluated nodes.
- * However, the time taken for this part is negligible compared to the rest.
- */
-boolean Predictor::subtreeIsMissing(const nodeptr node) const {
-	if (node->number > _pllTree->mxtips) {
-		return (subtreeIsMissing(node->next->back)
-				& subtreeIsMissing(node->next->next->back));
-	} else {
-		return (find(_missingSequences.begin(), _missingSequences.end(),
-				node->number) != _missingSequences.end());
-	}
-}
-
-nodeptr Predictor::findMissingDataAncestor( nodeptr startingNode ) const {
-
-	nodeptr currentNode;
-
-	if (!_missingSequences.size()) {
-		cerr << "ERROR: No missing sequences" << endl;
-		return(0);
-	}
-
-	/* start searching in a random missing node */
-	currentNode = startingNode;
-
-	while (true) {
-		bool missingRight = subtreeIsMissing(currentNode->next->back);
-		bool missingLeft = subtreeIsMissing(currentNode->next->next->back);
-
-		if (missingRight && missingLeft) {
-			cerr << "ERROR: Everything is missing!!" << endl;
-			exit(EX_IOERR);
-		} else if (!(missingRight || missingLeft)) {
-#ifdef PRINT_TRACE
-			cout << "TRACE: Found ancestor in " << currentNode->number << endl;
-#endif
-			return currentNode;
-		} else {
-			/* move to next position */
-			currentNode =
-					(!missingRight) ?
-							currentNode->next->back :
-							currentNode->next->next->back;
-#ifdef PRINT_TRACE
-			cout << "TRACE: Moving node to " << currentNode->number << endl;
-#endif
-		}
-	}
-	return 0;
-}
-
 
 void Predictor::mutateSequence(char * currentSequence,
 		const char * ancestralSequence, double branchLength) {
@@ -369,15 +301,33 @@ double Predictor::drawBranchLengthScaler( void ) const {
 double Predictor::computeBranchLength(const nodeptr node) const {
 
 	double branchLength = 0.0;
+
 	if (_pllPartitions->numberOfPartitions > 1) {
+		int sumwgt = 0;
+
+		/* compute the total weight */
+		for (unsigned int i = 0;
+						i < (unsigned int) _pllPartitions->numberOfPartitions; i++) {
+			if (!isMissingBranch(node, i)) {
+				sumwgt = _pllPartitions->partitionData[i]->width;
+			}
+		}
+
+		if (sumwgt == 0) {
+			cerr << "Error: There is no information available for stealing branch length ("
+					<< node->number << "," << node->back->number << ")" << endl;
+		}
+
+		assert(sumwgt > 0);
+
 		/* compute the branch length as the average over all other partitions */
 		for (unsigned int i = 0;
 				i < (unsigned int) _pllPartitions->numberOfPartitions; i++) {
-			if (_partitionNumber != i) {
-				branchLength += pllGetBranchLength(_pllTree, node, i);
+			if (_partitionNumber != i && !isMissingBranch(node, i)) {
+				double factor = (double) _pllPartitions->partitionData[i]->width / (double) sumwgt;
+				branchLength += pllGetBranchLength(_pllTree, node, i) * factor;
 			}
 		}
-		branchLength /= (_pllPartitions->numberOfPartitions - 1);
 	} else {
 		/* return the current and only branch length */
 		branchLength = pllGetBranchLength(_pllTree, node, _partitionNumber);
@@ -412,25 +362,51 @@ static double computeWeight(double x) {
 	return w;
 }
 
+bool Predictor::isAncestor(nodeptr node) const {
+	if (find(_missingSubtreesAncestors.begin(),
+				_missingSubtreesAncestors.end(), node)
+				== _missingSubtreesAncestors.end())
+		return false;
+	return true;
+}
+
+bool Predictor::isMissingBranch(const nodeptr node, int partition) const {
+	if (find(_missingBranches->at(partition).begin(),
+			_missingBranches->at(partition).end(), node)
+				== _missingBranches->at(partition).end())
+		return false;
+	return true;
+}
+
 void Predictor::getBranches(nodeptr node, int depth, double * cumWeight, vector<branchInfo> & branches) const {
 
 	double localSum = 0.0, ratio = 0.0, curWeight;
-	if (find(_missingSubtreesAncestors.begin(),
-			_missingSubtreesAncestors.end(), node->next)
-			== _missingSubtreesAncestors.end() && find(_missingSubtreesAncestors.begin(),
-					_missingSubtreesAncestors.end(), node->next->next)
-					== _missingSubtreesAncestors.end()) {
+	int sumWgt = 0;
+
+	if (!(isAncestor(node->next) || isAncestor(node->next->next))) {
+
+		for (unsigned int i = 0;
+				i < (unsigned int) _pllPartitions->numberOfPartitions; i++) {
+			if (!isMissingBranch(node, i)) {
+				sumWgt += _pllPartitions->partitionData[i]->width;
+			}
+		}
 
 		/* compute the current weighted branch length ratio */
 		for (unsigned int i = 0;
 				i < (unsigned int) _pllPartitions->numberOfPartitions; i++) {
-			if (i != _partitionNumber) {
-				localSum += pllGetBranchLength(_pllTree, node, i);
+			if (!isMissingBranch(node, i)) {
+				double factor = (double) _pllPartitions->partitionData[i]->width
+						/ (double) sumWgt;
+				localSum += pllGetBranchLength(_pllTree, node, i) * factor;
 			}
 		}
 		curWeight = computeWeight(depth * WMOD);
-		ratio = (_pllPartitions->numberOfPartitions - 1) * pllGetBranchLength(_pllTree, node, _partitionNumber)/localSum;
-		cout << setw(5) << right << node->number << " - weight: " << curWeight << " ratio: "
+		ratio = pllGetBranchLength(_pllTree, node, _partitionNumber)/localSum;
+
+		stringstream ss;
+						ss << "(" << node->number << "," << node->back->number << ")";
+		cout << setw(10) << right << ss.str() << " - weight: " << curWeight << " ratio: "
 				<< ratio << endl;
 
 		/* add the new sample */
@@ -454,26 +430,39 @@ void Predictor::getBranches(nodeptr node, int depth, double * cumWeight, vector<
 double Predictor::getSumBranches(nodeptr node, int depth, double * weight) const {
 
 	double childrenSum = 0.0, localSum = 0.0, ratio = 0.0;
-	double curWeight;
-	if (find(_missingSubtreesAncestors.begin(),
-			_missingSubtreesAncestors.end(), node->next)
-			== _missingSubtreesAncestors.end() && find(_missingSubtreesAncestors.begin(),
-					_missingSubtreesAncestors.end(), node->next->next)
-					== _missingSubtreesAncestors.end()) {
+
+	/* we define 2 weights: one according to the distance to the rooting branch
+	 * and another one accorting to the number of sites in the partition.
+	 */
+	double distanceWeight;
+	int sumWgt = 0;
+
+	if (!(isAncestor(node->next) || isAncestor(node->next->next))) {
+
+		for (unsigned int i = 0;
+				i < (unsigned int) _pllPartitions->numberOfPartitions; i++) {
+			if (!isMissingBranch(node, i)) {
+				sumWgt += _pllPartitions->partitionData[i]->width;
+			}
+		}
 
 		/* compute the current weighted branch length ratio */
 		for (unsigned int i = 0;
 				i < (unsigned int) _pllPartitions->numberOfPartitions; i++) {
-			if (i != _partitionNumber) {
-				localSum += pllGetBranchLength(_pllTree, node, i);
+			if (!isMissingBranch(node, i)) {
+				double factor = (double) _pllPartitions->partitionData[i]->width / (double) sumWgt;
+				localSum += pllGetBranchLength(_pllTree, node, i) * factor;
 			}
 		}
 
-		curWeight = computeWeight(depth * WMOD);
-		ratio = (_pllPartitions->numberOfPartitions - 1) * pllGetBranchLength(_pllTree, node, _partitionNumber)/localSum;
-		cout << setw(5) << right << node->number << setprecision(4) << " - weight: " << curWeight << " ratio: "
+		distanceWeight = computeWeight(depth * WMOD);
+		ratio = pllGetBranchLength(_pllTree, node, _partitionNumber)/localSum;
+
+		stringstream ss;
+				ss << "(" << node->number << "," << node->back->number << ")";
+		cout << setw(10) << right << ss.str() << setprecision(6) << " - weight: " << distanceWeight << " ratio: "
 				<< ratio << endl;
-		ratio *= curWeight;
+		ratio *= distanceWeight;
 
 		if ((unsigned int) node->number > numberOfTaxa) {
 			/* inspect children */
@@ -484,7 +473,7 @@ double Predictor::getSumBranches(nodeptr node, int depth, double * weight) const
 		} else {
 			assert(*weight == 0.0);
 		}
-		*weight += curWeight;
+		*weight += distanceWeight;
 
 	}
 	return (ratio + childrenSum);
@@ -705,6 +694,39 @@ void Predictor::evolveNode(const nodeptr node, const char * ancestralSequence) {
 	free(currentSequence);
 }
 
+void Predictor::getRootingNodes() {
+	assert ( !_missingSubtreesAncestors.size() );
+	if ( _missingBranches->at(_partitionNumber).size()) {
+		unsigned int i;
+		for (i = 0;
+				i < _missingBranches->at(_partitionNumber).size()
+						&& _missingBranches->at(_partitionNumber)[i]->number
+								<= _pllTree->mxtips; i++)
+			;
+
+		nodeptr currentNode = _missingBranches->at(_partitionNumber)[i++];
+		int counter = 0;
+		for ( ; i<_missingBranches->at(_partitionNumber).size(); i++) {
+			int testNode = _missingBranches->at(_partitionNumber)[i]->number;
+			assert ( testNode >=  currentNode->number );
+			if ( testNode == currentNode->number ) {
+				counter++;
+			} else {
+				/* each inner node should appear either 1 or 3 times */
+				assert ( counter == 0 || counter == 2);
+				if ( counter == 0 ) {
+					_missingSubtreesAncestors.push_back(currentNode);
+				} else {
+					counter = 0;
+				}
+				currentNode = _missingBranches->at(_partitionNumber)[i];
+			}
+		}
+	} else {
+		return;
+	}
+}
+
 void Predictor::predictMissingSequences( const pllAlignmentData * originalSequence ) {
 
 #ifdef PRINT_TRACE
@@ -718,13 +740,7 @@ void Predictor::predictMissingSequences( const pllAlignmentData * originalSequen
 		missingSequencesCopy = _missingSequences;
 	}
 
-	for (size_t i=0; i<_missingSequences.size(); i++) {
-		nodeptr ancestor = findMissingDataAncestor( _pllTree->nodep[_missingSequences[i]]->back );
-		if (find(_missingSubtreesAncestors.begin(), _missingSubtreesAncestors.end(),
-						ancestor) == _missingSubtreesAncestors.end()) {
-			_missingSubtreesAncestors.push_back(ancestor);
-		}
-	}
+	getRootingNodes();
 
 	if (_missingSequences.size()) {
 		if (branchLengthsMode == BL_SCALE) {
