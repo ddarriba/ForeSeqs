@@ -415,6 +415,15 @@ int main(int argc, char * argv[]) {
 		cout << "Average scaler" << endl;
 		break;
 	}
+	cout << setw(20) << left << "Prediction mode:";
+	switch (seqpred::predictionMode) {
+	case seqpred::PRED_ANCSEQ:
+		cout << "Ancestral sequences" << endl;
+		break;
+	case seqpred::PRED_MAP:
+		cout << "Marginal ancestral probabilities" << endl;
+		break;
+	}
 	cout << setw(20) << left << "Gamma rates:";
 	switch(seqpred::categoriesMode) {
 	case seqpred::CAT_RANDOM:

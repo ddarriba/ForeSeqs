@@ -535,11 +535,17 @@ void Predictor::evolveNode(const nodeptr node, const double * ancestralProbabili
 
 		double * currentProbabilities = (double *) malloc((size_t) numberOfRateCategories * _numberOfStates * n * sizeof(double));
 		for (int cat = 0; cat < (int)numberOfRateCategories; cat++) {
-			cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans,
-				n, _numberOfStates, _numberOfStates,
-				1.0, ancestralProbabilities, _numberOfStates,
-				&ancestralPMatrix[cat * _numberOfStates* _numberOfStates], _numberOfStates,
-				0.0, &currentProbabilities[cat * _numberOfStates * n], _numberOfStates);
+			if (ancestralPMatrix) {
+				cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans,
+					n, _numberOfStates, _numberOfStates,
+					1.0, ancestralProbabilities, _numberOfStates,
+					&ancestralPMatrix[cat * _numberOfStates* _numberOfStates], _numberOfStates,
+					0.0, &currentProbabilities[cat * _numberOfStates * n], _numberOfStates);
+			} else {
+				/* copy the ancestral probabilities for each category */
+				memcpy(&currentProbabilities[cat * _numberOfStates * n], ancestralProbabilities,
+						_numberOfStates * n * sizeof(double));
+			}
 
 			if (USE_FIXED_ANCESTRAL) {
 				double * M = &currentProbabilities[cat * _numberOfStates * n];
