@@ -34,10 +34,17 @@ AC_CONFIG_FILES([
 AM_PROG_CC_C_O
 
 # Checks for libraries.
-AC_CHECK_LIB([m], [main])
-AC_CHECK_LIB([openblas], [cblas_daxpy])
+AC_CHECK_LIB([m], [main], [], [
+  AC_MSG_ERROR([Could  not find MATH library])
+])
+AC_CHECK_LIB([openblas], [cblas_daxpy], [], [
+  AC_MSG_ERROR([Could  not find OPENBLAS library])
+])
 # AC_CHECK_LIB([pthread], [pthread_create])
 # AC_CHECK_LIB([pll-sse3-pthreads], [pllCreateInstance])
-AC_CHECK_LIB([pll-sse3], [pllCreateInstance])
+AC_CHECK_LIB([pll-avx], [pllCreateInstance], [], [
+  AC_CHECK_LIB([pll-sse3], [pllCreateInstance], [], [
+    AC_MSG_ERROR([Could  not find PLL library])
+])])
 
 AC_OUTPUT
