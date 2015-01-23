@@ -722,6 +722,10 @@ void Predictor::getRootingNodes() {
 				currentNode = _missingBranches->at(_partitionNumber)[i];
 			}
 		}
+		/* account for the last one */
+		if (counter == 0) {
+			_missingSubtreesAncestors.push_back(currentNode);
+		}
 	} else {
 		return;
 	}

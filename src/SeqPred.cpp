@@ -501,13 +501,19 @@ int main(int argc, char * argv[]) {
 	vector<vector<int> > missingSequences =  seqpred::Utils::findMissingSequences(pllTree, pllPartitions);
 	vector<vector<nodeptr> > missingBranches = seqpred::Utils::findMissingBranches(pllTree, pllPartitions, missingSequences);
 
-//		for (int i=0; i<missingBranches.size(); i++) {
-//			cout << "PARTITION " << i << "/" << missingBranches.size() << endl;
-//			cout << "  Branches: " << missingBranches[i].size() << endl;
-//			for (int j=0; j<missingBranches[i].size(); j++) {
-//				cout << "    * " << missingBranches[i][j]->number << endl;
-//			}
-//		}
+#ifdef PRINT_TRACE
+	pllTreeToNewick(pllTree->tree_string, pllTree, pllPartitions,
+			pllTree->start->back, false, true, true, false, false,
+			PLL_SUMMARIZE_LH, false, false);
+	cout << pllTree->tree_string << endl;
+	for (int i = 0; i < missingBranches.size(); i++) {
+		cout << "PARTITION " << i << "/" << missingBranches.size() << endl;
+		cout << "  Branches: " << missingBranches[i].size() << endl;
+		for (int j = 0; j < missingBranches[i].size(); j++) {
+			cout << "    * " << missingBranches[i][j]->number << endl;
+		}
+	}
+#endif
 
 	/* Predict sequences */
 	cout << "Predicting sequences..." << endl << endl;
