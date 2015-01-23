@@ -766,7 +766,14 @@ void Predictor::predictMissingSequences( const pllAlignmentData * originalSequen
 				_branchLengthScaler += getSumBranches(
 						startingNode->next->next->back, 0, &weight);
 				cumWeight += weight;
-				_branchLengthScaler /= cumWeight;
+
+				if (cumWeight > EPSILON) {
+					_branchLengthScaler /= cumWeight;
+				} else {
+					_branchLengthScaler = 1.0;
+				}
+				_branchLengthScaler = min(_branchLengthScaler, MAX_SCALER);
+				_branchLengthScaler = max(_branchLengthScaler, MIN_SCALER);
 			}
 			cout << "Applying branch length scaler " << _branchLengthScaler << endl << endl;
 		} else if (branchLengthsMode == BL_DRAW) {

@@ -19,6 +19,9 @@
 
 #define EPSILON 1e-6		  /** epsilon for comparing floating point values */
 
+#define MIN_SCALER 1e-4
+#define MAX_SCALER 1e+4
+
 #define EX_OK EXIT_SUCCESS	  /** exit correctly */
 #define EX_UNIMPLEMENTED 1	  /** exit due to an unimplemented feature */
 #define EX_IOERR 2			  /** exit due to an input/output error */
