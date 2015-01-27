@@ -17,6 +17,8 @@
 #define PLL_UNDEFINED_SITE 15
 #define USE_FIXED_ANCESTRAL 1
 
+#define MAX_LOCAL_SCALER 1000
+
 namespace seqpred {
 
 typedef struct {

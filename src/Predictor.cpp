@@ -309,7 +309,7 @@ double Predictor::computeBranchLength(const nodeptr node) const {
 		for (unsigned int i = 0;
 						i < (unsigned int) _pllPartitions->numberOfPartitions; i++) {
 			if (!isMissingBranch(node, i)) {
-				sumwgt = _pllPartitions->partitionData[i]->width;
+				sumwgt += _pllPartitions->partitionData[i]->width;
 			}
 		}
 
@@ -320,14 +320,18 @@ double Predictor::computeBranchLength(const nodeptr node) const {
 
 		assert(sumwgt > 0);
 
+		double sumFactors = 0.0;
 		/* compute the branch length as the average over all other partitions */
 		for (unsigned int i = 0;
 				i < (unsigned int) _pllPartitions->numberOfPartitions; i++) {
 			if (_partitionNumber != i && !isMissingBranch(node, i)) {
 				double factor = (double) _pllPartitions->partitionData[i]->width / (double) sumwgt;
-				branchLength += pllGetBranchLength(_pllTree, node, i) * factor;
+				sumFactors += factor;
+				double currentBL = pllGetBranchLength(_pllTree, node, i) * factor;
+				branchLength += currentBL;
 			}
 		}
+		assert(Utils::floatEquals(sumFactors, 1.0));
 	} else {
 		/* return the current and only branch length */
 		branchLength = pllGetBranchLength(_pllTree, node, _partitionNumber);
@@ -380,41 +384,66 @@ bool Predictor::isMissingBranch(const nodeptr node, int partition) const {
 
 void Predictor::getBranches(nodeptr node, int depth, double * cumWeight, vector<branchInfo> & branches) const {
 
-	double localSum = 0.0, ratio = 0.0, curWeight;
+	double localSum = 0.0, ratio = 0.0, curWeight = 0.0;
 	int sumWgt = 0;
 
 	if (!(isAncestor(node->next) || isAncestor(node->next->next))) {
 
-		for (unsigned int i = 0;
-				i < (unsigned int) _pllPartitions->numberOfPartitions; i++) {
-			if (!isMissingBranch(node, i)) {
-				sumWgt += _pllPartitions->partitionData[i]->width;
+		/* add to scaler only if the branch exist */
+		if (!isMissingBranch(node, _partitionNumber)) {
+
+			for (unsigned int i = 0;
+					i < (unsigned int) _pllPartitions->numberOfPartitions;
+					i++) {
+				if (_partitionNumber != i && !isMissingBranch(node, i)) {
+					sumWgt += _pllPartitions->partitionData[i]->width;
+				}
+			}
+
+			/* add to scaler only if there is info in other partitions */
+			if (sumWgt > 0) {
+
+				double branchLength = pllGetBranchLength(_pllTree, node, _partitionNumber);
+
+				/* compute the current weighted branch length ratio */
+				double sumFactors = 0.0;
+				for (unsigned int i = 0;
+						i < (unsigned int) _pllPartitions->numberOfPartitions;
+						i++) {
+					if (_partitionNumber != i && !isMissingBranch(node, i)) {
+						double curBranchLength = pllGetBranchLength(_pllTree, node, i);
+						double factor =
+								(double) _pllPartitions->partitionData[i]->width
+										/ (double) sumWgt;
+						sumFactors += factor;
+						double r = branchLength / curBranchLength;
+						if (r > MAX_LOCAL_SCALER || r < (1 / MAX_LOCAL_SCALER)) {
+							/* skip */
+							localSum += branchLength * factor;
+						} else {
+							localSum += curBranchLength * factor;
+						}
+					}
+				}
+				assert(Utils::floatEquals(sumFactors, 1.0));
+
+				curWeight = computeWeight(depth * WMOD);
+				ratio = branchLength / localSum;
+
+				stringstream ss;
+				ss << "(" << node->number << "," << node->back->number << ")";
+				cout << setw(10) << right << ss.str() << " - weight: "
+						<< curWeight << " ratio: " << ratio << endl;
+
+				/* add the new sample */
+				branchInfo bInfo;
+				bInfo.branchNumber = node->number;
+				bInfo.scaler = ratio;
+				bInfo.weight = curWeight;
+				branches.push_back(bInfo);
+
 			}
 		}
-
-		/* compute the current weighted branch length ratio */
-		for (unsigned int i = 0;
-				i < (unsigned int) _pllPartitions->numberOfPartitions; i++) {
-			if (!isMissingBranch(node, i)) {
-				double factor = (double) _pllPartitions->partitionData[i]->width
-						/ (double) sumWgt;
-				localSum += pllGetBranchLength(_pllTree, node, i) * factor;
-			}
-		}
-		curWeight = computeWeight(depth * WMOD);
-		ratio = pllGetBranchLength(_pllTree, node, _partitionNumber)/localSum;
-
-		stringstream ss;
-						ss << "(" << node->number << "," << node->back->number << ")";
-		cout << setw(10) << right << ss.str() << " - weight: " << curWeight << " ratio: "
-				<< ratio << endl;
-
-		/* add the new sample */
-		branchInfo bInfo;
-		bInfo.branchNumber = node->number;
-		bInfo.scaler = ratio;
-		bInfo.weight = curWeight;
-		branches.push_back(bInfo);
 
 		if ((unsigned int) node->number > numberOfTaxa) {
 			/* inspect children */
@@ -434,35 +463,66 @@ double Predictor::getSumBranches(nodeptr node, int depth, double * weight) const
 	/* we define 2 weights: one according to the distance to the rooting branch
 	 * and another one accorting to the number of sites in the partition.
 	 */
-	double distanceWeight;
+	double distanceWeight = 0.0;
 	int sumWgt = 0;
 
 	if (!(isAncestor(node->next) || isAncestor(node->next->next))) {
 
-		for (unsigned int i = 0;
-				i < (unsigned int) _pllPartitions->numberOfPartitions; i++) {
-			if (!isMissingBranch(node, i)) {
-				sumWgt += _pllPartitions->partitionData[i]->width;
+		/* add to scaler only if the branch exist */
+		if (!isMissingBranch(node, _partitionNumber)) {
+
+			for (unsigned int i = 0;
+					i < (unsigned int) _pllPartitions->numberOfPartitions;
+					i++) {
+				if (_partitionNumber != i && !isMissingBranch(node, i)) {
+					sumWgt += _pllPartitions->partitionData[i]->width;
+				}
 			}
-		}
 
-		/* compute the current weighted branch length ratio */
-		for (unsigned int i = 0;
-				i < (unsigned int) _pllPartitions->numberOfPartitions; i++) {
-			if (!isMissingBranch(node, i)) {
-				double factor = (double) _pllPartitions->partitionData[i]->width / (double) sumWgt;
-				localSum += pllGetBranchLength(_pllTree, node, i) * factor;
-			}
-		}
+			/* add to scaler only if there is info in other partitions */
+			if (sumWgt > 0) {
 
-		distanceWeight = computeWeight(depth * WMOD);
-		ratio = pllGetBranchLength(_pllTree, node, _partitionNumber)/localSum;
+				double branchLength = pllGetBranchLength(_pllTree, node,
+						_partitionNumber);
 
-		stringstream ss;
+				/* compute the current weighted branch length ratio */
+				double sumFactors = 0.0;
+				for (unsigned int i = 0;
+						i < (unsigned int) _pllPartitions->numberOfPartitions;
+						i++) {
+
+					if (_partitionNumber != i && !isMissingBranch(node, i)) {
+
+						double curBranchLength = pllGetBranchLength(_pllTree, node, i);
+						double factor =
+								(double) _pllPartitions->partitionData[i]->width
+										/ (double) sumWgt;
+						sumFactors += factor;
+//						double r = branchLength / curBranchLength;
+//						if (r > MAX_LOCAL_SCALER
+//								|| r < (1.0 / MAX_LOCAL_SCALER)) {
+//							/* skip */
+//							localSum += branchLength * factor;
+//						} else {
+							localSum += curBranchLength * factor;
+//						}
+
+					}
+
+				}
+				assert(Utils::floatEquals(sumFactors, 1.0));
+
+				distanceWeight = computeWeight(depth * WMOD);
+				ratio = branchLength / localSum;
+
+				stringstream ss;
 				ss << "(" << node->number << "," << node->back->number << ")";
-		cout << setw(10) << right << ss.str() << setprecision(6) << " - weight: " << distanceWeight << " ratio: "
-				<< ratio << endl;
-		ratio *= distanceWeight;
+				cout << setw(10) << right << ss.str() << setprecision(6)
+						<< " - weight: " << distanceWeight << " ratio: "
+						<< ratio << endl;
+				ratio *= distanceWeight;
+			}
+		}
 
 		if ((unsigned int) node->number > numberOfTaxa) {
 			/* inspect children */

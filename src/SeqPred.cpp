@@ -500,7 +500,12 @@ int main(int argc, char * argv[]) {
 	optimizeModelParameters(pllTree, pllPartitions);
 
 #ifdef PRINT_TRACE
-	cout << "TRACE: Tree=" << pllTree->tree_string << endl;
+	for (int i=0; i<pllPartitions->numberOfPartitions; i++) {
+		pllTreeToNewick(pllTree->tree_string, pllTree, pllPartitions,
+				pllTree->start->back, true, true, false, false, false,
+				i, false, false);
+		cout << "PARTITION " << i << ": " << pllTree->tree_string << endl;
+	}
 #endif
 
 	currentTime = time(NULL);
@@ -512,7 +517,7 @@ int main(int argc, char * argv[]) {
 
 #ifdef PRINT_TRACE
 	pllTreeToNewick(pllTree->tree_string, pllTree, pllPartitions,
-			pllTree->start->back, false, true, true, false, false,
+			pllTree->start->back, true, true, true, false, false,
 			PLL_SUMMARIZE_LH, false, false);
 	cout << pllTree->tree_string << endl;
 	for (int i = 0; i < missingBranches.size(); i++) {
