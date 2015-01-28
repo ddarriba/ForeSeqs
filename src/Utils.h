@@ -24,8 +24,8 @@
 
 #define EX_OK EXIT_SUCCESS	  /** exit correctly */
 #define EX_UNIMPLEMENTED 1	  /** exit due to an unimplemented feature */
-#define EX_IOERR 2			  /** exit due to an input/output error */
-#define EX_MEMORY 3			  /** exit due to a memory allocation error */
+#define EX_IOERR 2		  /** exit due to an input/output error */
+#define EX_MEMORY 3		  /** exit due to a memory allocation error */
 
 namespace seqpred {
 
@@ -34,22 +34,22 @@ enum DataType { DT_NUCLEIC, DT_PROTEIC};
 
 /** Mode for selecting per-site rate categories */
 enum CatMode {
-	CAT_RANDOM,		/** Random per-site category */
-	CAT_ESTIMATE,	/** Estimated from other partitions */
-	CAT_AVERAGE		/** Average of all categories */
+	CAT_RANDOM,	/** Random per-site category */
+	CAT_ESTIMATE,	/** Estimated from existing data */
+	CAT_AVERAGE	/** Average of all categories */
 	};
 
 /** Mode for stealing the branch lengths */
 enum BLMode {
-	BL_AVERAGE,		/** Average among all other partitions */
-	BL_DRAW,		/** Draw a scaler from an inferred distribution */
-	BL_SCALE		/** Find an average scaler */
+	BL_AVERAGE,	/** Average among partitions with existing data */
+	BL_DRAW,	/** Draw a scaler from an inferred distribution */
+	BL_SCALE	/** Find an average scaler */
 	};
 
 /** Mode for predicting the sequences */
 enum PredMode {
 	PRED_ANCSEQ,	/** Predict from ancestral sequences */
-	PRED_MAP		/** Predict from Marginal Ancestral Probabilities */
+	PRED_MAP	/** Predict from Marginal Ancestral Probabilities */
 };
 
 class Utils {
@@ -168,14 +168,14 @@ private:
 	static boolean subtreeIsMissing( pllInstance * pllTree, std::vector<int> * missingSequences, const nodeptr node, std::vector<nodeptr> * missingBranches );
 };
 
-extern BLMode branchLengthsMode;			/** Mode for stealing the branch lengths */
-extern CatMode categoriesMode;				/** Mode for selecting per-site rate categories */
-extern PredMode predictionMode;				/** Prior for predicting the sequences */
+extern BLMode branchLengthsMode;		/** Mode for stealing the branch lengths */
+extern CatMode categoriesMode;			/** Mode for selecting per-site rate categories */
+extern PredMode predictionMode;			/** Prior for predicting the sequences */
 extern unsigned int numberOfRateCategories;	/** Number of gamma rate categories */
-extern unsigned int numberOfTaxa;			/* Number of taxa */
-extern unsigned int sequenceLength;			/* Number of sites (aa/bp) */
-extern char ** taxaNames;					/* Name list of taxa */
-extern unsigned int * seqIndexTranslate;		/* Array for translating indexes in PLL instance to PLL alignment */
+extern unsigned int numberOfTaxa;		/* Number of taxa */
+extern unsigned int sequenceLength;		/* Number of sites (aa/bp) */
+extern char ** taxaNames;			/* Name list of taxa */
+extern unsigned int * seqIndexTranslate;	/* Array for translating indexes in PLL instance to PLL alignment */
 
 } /* namespace seqpred */
 

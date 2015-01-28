@@ -249,8 +249,8 @@ void Predictor::mutateSequence(char * currentSequence,
 		}
 		break;
 	}
-	case CAT_RANDOM:
 	case CAT_ESTIMATE:
+	case CAT_RANDOM:
 	{
 		short * siteCatPtr = _catToSite;
 		for (unsigned int i = 0; i < _partitionLength; i++) {

@@ -83,13 +83,13 @@ void exit_with_usage(char * command) {
 			command);
 	printf("\n\n");
 	printf("  -b, --branches    branchLengthsMode Set the mode for stealing the branch lengths (default: a)\n");
-	printf("      --branches a    (average)       Average of branch lengths for other partitions\n");
+	printf("      --branches a    (average)       Average of branch lengths in partitions with existing data\n");
 	printf("      --branches d    (draw)          Draw a branch length from an inferred distribution\n");
 	printf("      --branches s    (scale)         Compute an average branch-length scaler");
 	printf("\n\n");
 	printf("  -c, --categories  categoriesMode    Set the mode for selecting the per-site category (default: r)\n");
 	printf("      --categories r  (random)        Random per-site category for each sequence\n");
-	printf("      --categories e  (estimate)      Estimated from other partitions\n");
+	printf("      --categories e  (estimate)      Estimated from the existing data\n");
 	printf("      --categories a  (average)       Average of all categories");
 	printf("\n\n");
 	printf("  -h, --help                           Shows this help message");
