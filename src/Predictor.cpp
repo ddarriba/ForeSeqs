@@ -17,9 +17,12 @@
 #include <cstring>
 #include <cassert>
 #include <cmath>
+#include <cstdlib>
 #include <alloca.h>
 
+#ifdef _USE_OPENBLAS_
 #include <cblas.h>
+#endif
 
 using namespace std;
 
@@ -558,7 +561,7 @@ double Predictor::getSumBranches(nodeptr node, int depth, double * weight) const
 //	return scaler;
 //}
 
-void Predictor::evolveNode(const nodeptr node, const double * ancestralProbabilities, const double * ancestralPMatrix) {
+void Predictor::evolveNode(const nodeptr node, const double * ancestralProbabilities, double * ancestralPMatrix) {
 
 #ifdef PRINT_TRACE
 	cout << "TRACE: Mutating node " << node->number << endl;
@@ -574,9 +577,11 @@ void Predictor::evolveNode(const nodeptr node, const double * ancestralProbabili
 	cout << "  - Estimated branch length for node " << setprecision(5) << node->number << " (partition " << _pllPartitions->partitionData[_partitionNumber]->partitionName << ") = " << branchLength << endl;
 
 	if (node->number > _pllTree->mxtips) {
-		double * currentPMatrix = (double *) malloc(
+
+		double * currentPMatrix = (double *) Utils::allocate(
 				(size_t) (numberOfRateCategories * _numberOfStates
-						* _numberOfStates) * sizeof(double *));
+						* _numberOfStates), sizeof(double));
+
 		mutatePMatrix(currentPMatrix, ancestralPMatrix, branchLength);
 
 		evolveNode(node->next->back, ancestralProbabilities, currentPMatrix);
@@ -586,21 +591,25 @@ void Predictor::evolveNode(const nodeptr node, const double * ancestralProbabili
 	} else {
 		/* compute the new probability matrix */
 		/* construct the new marginal probabilities matrix */
-	//	void cblas_dgemm(const enum CBLAS_ORDER Order, const enum CBLAS_TRANSPOSE TransA, const enum CBLAS_TRANSPOSE TransB,
-	//	                 const int M, const int N, const int K,
-	//	                 const double alpha, const double *A, const int lda
-	//	                 const double *B, const int ldb,
-	//	                 const double beta, double *C, const int ldc);
-		// Multiply P' x M
 
-		double * currentProbabilities = (double *) malloc((size_t) numberOfRateCategories * _numberOfStates * n * sizeof(double));
+		// Multiply P' x M
+		double * currentProbabilities = (double *) Utils::allocate(
+				(size_t) numberOfRateCategories * _numberOfStates * n,
+				sizeof(double));
+
 		for (int cat = 0; cat < (int)numberOfRateCategories; cat++) {
 			if (ancestralPMatrix) {
+#ifdef _USE_OPENBLAS_
 				cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans,
 					n, _numberOfStates, _numberOfStates,
 					1.0, ancestralProbabilities, _numberOfStates,
 					&ancestralPMatrix[cat * _numberOfStates* _numberOfStates], _numberOfStates,
 					0.0, &currentProbabilities[cat * _numberOfStates * n], _numberOfStates);
+#else
+				Utils::matrixMultiply(_numberOfStates, n, ancestralProbabilities,
+						&ancestralPMatrix[cat * _numberOfStates
+								* _numberOfStates], &currentProbabilities[cat * _numberOfStates * n]);
+#endif
 			} else {
 				/* copy the ancestral probabilities for each category */
 				memcpy(&currentProbabilities[cat * _numberOfStates * n], ancestralProbabilities,
@@ -687,22 +696,27 @@ void Predictor::evolveNode(const nodeptr node, const double * ancestralProbabili
 }
 
 void Predictor::mutatePMatrix(double * currentPMatrix,
-		const double * ancestralPMatrix, double branchLength) {
+		double * ancestralPMatrix, double branchLength) {
 
 	double * gammaRates = (double *) alloca (numberOfRateCategories * sizeof(double));
 
 	pllMakeGammaCats(_pllPartitions->partitionData[_partitionNumber]->alpha, gammaRates, numberOfRateCategories, false);
 
 	/* construct and validate P matrix */
-	double matrix[numberOfRateCategories][_numberOfStates*_numberOfStates];
+	double * matrix = (double *) Utils::allocate(
+			(size_t) numberOfRateCategories * _numberOfStates * _numberOfStates,
+			sizeof(double));
+
 	for (unsigned int i = 0; i < numberOfRateCategories; i++) {
-		_currentModel->setMatrix(matrix[i], gammaRates[i] * branchLength, false);
+		_currentModel->setMatrix(
+				&(matrix[i * _numberOfStates * _numberOfStates]),
+				gammaRates[i] * branchLength, false);
 
 		/* validation */
 		for (unsigned int j = 0; j < _numberOfStates; j++) {
 			double sum = 0.0;
 			for (unsigned int k = 0; k < _numberOfStates; k++) {
-				sum += matrix[i][j*_numberOfStates + k];
+				sum += matrix[i * _numberOfStates * _numberOfStates + j*_numberOfStates + k];
 			}
 			assert(Utils::floatEquals(sum, 1.0));
 		}
@@ -712,18 +726,27 @@ void Predictor::mutatePMatrix(double * currentPMatrix,
 		/* multiply P matrices */
 		int n = _numberOfStates;
 		for (int cat = 0; cat < (int) numberOfRateCategories; cat++) {
+			double * catMatrix = &(matrix[cat * _numberOfStates
+					* _numberOfStates]);
+#ifdef _USE_OPENBLAS_
 			cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, n, n, n, 1.0,
-					matrix[cat], n, &ancestralPMatrix[cat * n * n], n, 0.0,
+					catMatrix, n, &ancestralPMatrix[cat * n * n], n, 0.0,
 					&currentPMatrix[cat * n * n], n);
+#else
+			Utils::matrixMultiply(n, n, catMatrix, &ancestralPMatrix[cat * n * n],
+					&currentPMatrix[cat * n * n]);
+#endif
 		}
 	} else {
 		/* directly set the P matrix */
 		for (unsigned int i = 0; i < numberOfRateCategories; i++) {
-			memcpy(&currentPMatrix[i * _numberOfStates * _numberOfStates],
-					matrix[i],
-					_numberOfStates * _numberOfStates * sizeof(double));
+			memcpy(currentPMatrix, matrix,
+					numberOfRateCategories * _numberOfStates * _numberOfStates
+							* sizeof(double));
 		}
 	}
+
+	free(matrix);
 }
 
 void Predictor::evolveNode(const nodeptr node, const char * ancestralSequence) {
@@ -915,17 +938,12 @@ void Predictor::predictMissingSequences( const pllAlignmentData * originalSequen
 
 			/* extract the ancestral for the partition */
 			size_t partProbsSize = (probsSize/sequenceLength) * _partitionLength;
-			double * probsAncestral = (double *) malloc(partProbsSize * sizeof(double));
+
+			double * probsAncestral = (double *) Utils::allocate(partProbsSize,
+					sizeof(double));
+
 			memcpy(probsAncestral, &(probs[_start * _numberOfStates]), partProbsSize * sizeof(double));
 			free (probs);
-
-			/* validate */
-//			for (int i=0; i<_partitionLength; i++) {
-//				for (int j=0; j<_numberOfStates; j++) {
-//					cout << probsAncestral[i*_numberOfStates + j] << " ";
-//				}
-//				cout << endl;
-//			}
 
 			evolveNode(ancestor->back, probsAncestral);
 			free (probsAncestral);

@@ -14,10 +14,13 @@ AC_INIT([seqpred],
 AC_CONFIG_AUX_DIR(config)
 AM_CONFIG_HEADER(config.h)
 AM_INIT_AUTOMAKE([dist-bzip2])
+AC_CONFIG_MACRO_DIR([m4])
 
 # CFLAGS="$CFLAGS -I${PWD}/libpll/include"
 # CXXFLAGS="$CXXFLAGS -I${PWD}/libpll/include"
 # LDFLAGS="$LDFLAGS -L${PWD}/libpll/lib"
+
+AX_EXT
 
 LF_CONFIGURE_CC
 LF_CONFIGURE_CXX
@@ -37,9 +40,11 @@ AM_PROG_CC_C_O
 AC_CHECK_LIB([m], [main], [], [
   AC_MSG_ERROR([Could  not find MATH library])
 ])
-AC_CHECK_LIB([openblas], [cblas_daxpy], [], [
-  AC_MSG_ERROR([Could  not find OPENBLAS library])
-])
+
+# AC_CHECK_LIB([openblas], [cblas_daxpy], [], [
+#   AC_MSG_ERROR([Could  not find OPENBLAS library])
+# ])
+
 # AC_CHECK_LIB([pthread], [pthread_create])
 # AC_CHECK_LIB([pll-sse3-pthreads], [pllCreateInstance])
 AC_CHECK_LIB([pll-avx], [pllCreateInstance], [], [

@@ -11,7 +11,12 @@
 #include <climits>
 #include <cstdlib>
 #include <cstring>
+#include <cassert>
 #include <cmath>
+
+#ifdef __SSE3__
+#include <x86intrin.h>
+#endif
 
 using namespace std;
 
@@ -48,6 +53,41 @@ void Utils::printVector(const double * vec, int len) {
 
 bool Utils::floatEquals(double v1, double v2) {
 	return (std::abs(v1 - v2) <= EPSILON);
+}
+
+void transpose(double * m, int size)
+{
+    for (int i = 0; i < size; i++) {
+        for (int j = i + 1; j < size; j++) {
+            std::swap(m[i*size + j], m[j*size + i]);
+        }
+    }
+}
+
+void Utils::matrixMultiply(int ncols, int nrows, const double * A,
+		double * B, double * result) {
+	assert(ncols == 4 || ncols == 20);
+		transpose(B, ncols);
+		for (int i = 0; i < nrows; i++) {
+			for (int j = 0; j < ncols; j++) {
+#ifdef __SSE3__
+				__m128d c = _mm_setzero_pd();
+
+				for (int k = 0; k < ncols; k += 2) {
+					c = _mm_add_pd(c, _mm_mul_pd(_mm_load_pd(&A[i*ncols + k]), _mm_load_pd(&B[j*ncols + k])));
+				}
+				c = _mm_hadd_pd(c, c);
+				_mm_store_sd(&result[i*ncols + j], c);
+#else
+				double c = 0;
+				for (int k = 0; k < ncols; k++) {
+					c += A[i * ncols + k] * B[j * ncols + k];
+				}
+				result[i * ncols + j] = c;
+#endif
+			}
+		}
+		transpose(B, ncols);
 }
 
 DataType Utils::getDataType(const partitionList * pllPartitions, int numberOfPartition) {
@@ -205,6 +245,19 @@ std::vector< std::vector<nodeptr> > Utils::findMissingBranches ( pllInstance * p
 	}
 
 	return missingBranches;
+}
+
+void * Utils::allocate(size_t n, size_t el_size) {
+	void * mem;
+#ifdef __SSE3__
+	if (posix_memalign(&mem, 16, n * el_size)) {
+		cerr << "Error allocating aligned memory" << endl;
+		exit(EX_MEMORY);
+	}
+#else
+	mem = malloc(n * el_size);
+#endif
+	return mem;
 }
 
 } /* namespace seqpred */

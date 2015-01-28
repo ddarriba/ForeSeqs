@@ -102,7 +102,7 @@ private:
 	void mutateSequence ( char * currentSequence, const char * ancestralSequence, double branchLength );
 
 	void mutatePMatrix(double * currentPMatrix,
-			const double * ancestralPMatrix, double branchLength);
+			double * ancestralPMatrix, double branchLength);
 
 	/**
 	* @brief Predict the sequences for a whole subtree starting from an ancestral sequence
@@ -119,7 +119,7 @@ private:
 	 * @param ancestralProbabilities The marginal ancestral probabilites
 	 * @param n The number of sites
 	 */
-	void evolveNode(const nodeptr node, const double * ancestralProbabilites, const double * ancestralPMatrix = 0);
+	void evolveNode(const nodeptr node, const double * ancestralProbabilites, double * ancestralPMatrix = 0);
 
 	/**
 	 * @brief Compute the branch length for a node

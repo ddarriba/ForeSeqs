@@ -103,6 +103,11 @@ public:
 	static bool floatEquals(double v1, double v2);
 
 	/**
+	 * @brief Multiply A x B matrices
+	 */
+	static void matrixMultiply(int columns, int rows, const double * A, double * B, double * result);
+
+	/**
 	 * @brief Gets the data type (NT or AA) according to the number of states
 	 *
 	 * @param[in] pllPartitions The PLL partition list
@@ -152,6 +157,8 @@ public:
 	 * @return The list of missing branches in the tree
 	 */
 	static std::vector< std::vector<nodeptr> > findMissingBranches ( pllInstance * pllTree, partitionList * pllPartitions, std::vector< std::vector<int> > missingSequences );
+
+	static void * allocate(size_t n, size_t el_size);
 
 private:
 
