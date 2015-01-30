@@ -142,6 +142,7 @@ vector< vector<int> > Utils::findMissingSequences( pllInstance * pllTree, partit
 }
 
 boolean Utils::subtreeIsMissing( pllInstance * pllTree, vector<int> * missingSequences, const nodeptr node, vector<nodeptr> * missingBranches ) {
+
 	if (find(missingBranches->begin(), missingBranches->end(), node)
 			!= missingBranches->end()) {
 		return true;
@@ -162,7 +163,8 @@ boolean Utils::subtreeIsMissing( pllInstance * pllTree, vector<int> * missingSeq
 				!= missingSequences->end()) {
 
 			missingBranches->push_back(node);
-						missingBranches->push_back(node->back);
+			missingBranches->push_back(node->back);
+
 
 			/* remove visited taxon */
 			missingSequences->erase(
@@ -179,14 +181,11 @@ boolean Utils::subtreeIsMissing( pllInstance * pllTree, vector<int> * missingSeq
 nodeptr Utils::findRootingNode( pllInstance * pllTree, vector<int> * missingSequences, nodeptr startingNode, vector<nodeptr> * missingBranches ) {
 
 	nodeptr currentNode;
-	bool moveRoot = false;
 
 	if (!missingSequences->size()) {
 		return(0);
 	}
 
-	missingBranches->push_back(startingNode);
-	missingBranches->push_back(startingNode->back);
 	if (startingNode->back->number <= pllTree->mxtips) {
 		missingSequences->erase(
 				remove(missingSequences->begin(), missingSequences->end(),
@@ -207,14 +206,15 @@ nodeptr Utils::findRootingNode( pllInstance * pllTree, vector<int> * missingSequ
 #ifdef PRINT_TRACE
 			cout << "TRACE: Found ancestor in " << currentNode->number << endl;
 #endif
-			if (moveRoot) {
-				missingBranches->push_back(currentNode);
-				missingBranches->push_back(currentNode->back);
-			}
+
+			missingBranches->push_back(currentNode);
+			missingBranches->push_back(currentNode->back);
+
 			return currentNode;
 		} else {
 			/* move to next position */
-			moveRoot = true;
+			missingBranches->push_back(currentNode);
+			missingBranches->push_back(currentNode->back);
 			currentNode =
 					(!missingRight) ?
 							currentNode->next->back :

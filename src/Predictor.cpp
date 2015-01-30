@@ -305,7 +305,7 @@ double Predictor::computeBranchLength(const nodeptr node) const {
 
 	double branchLength = 0.0;
 
-	if (_pllPartitions->numberOfPartitions > 1) {
+	if (isMissingBranch(node, _partitionNumber) && _pllPartitions->numberOfPartitions > 1) {
 		int sumwgt = 0;
 
 		/* compute the total weight */
@@ -327,7 +327,7 @@ double Predictor::computeBranchLength(const nodeptr node) const {
 		/* compute the branch length as the average over all other partitions */
 		for (unsigned int i = 0;
 				i < (unsigned int) _pllPartitions->numberOfPartitions; i++) {
-			if (_partitionNumber != i && !isMissingBranch(node, i)) {
+			if (!isMissingBranch(node, i)) {
 				double factor = (double) _pllPartitions->partitionData[i]->width / (double) sumwgt;
 				sumFactors += factor;
 				double currentBL = pllGetBranchLength(_pllTree, node, i) * factor;
@@ -785,6 +785,23 @@ void Predictor::evolveNode(const nodeptr node, const char * ancestralSequence) {
 
 void Predictor::getRootingNodes() {
 	assert ( !_missingSubtreesAncestors.size() );
+
+
+	pllTreeToNewick(_pllTree->tree_string, _pllTree, _pllPartitions,
+				_pllTree->start->back, false, true, true, false, false,
+				PLL_SUMMARIZE_LH, false, false);
+
+#ifdef DEBUG_BRANCHES
+		cout << _pllTree->tree_string << endl;
+		for (int i = 0; i < _missingBranches->size(); i++) {
+			cout << "PARTITION " << i << "/" << _missingBranches->size() << endl;
+			cout << "  Branches: " << _missingBranches->at(i).size() << endl;
+			for (int j = 0; j < _missingBranches->at(i).size(); j++) {
+				cout << "    * " << _missingBranches->at(i)[j]->number << endl;
+			}
+		}
+#endif
+
 	if ( _missingBranches->at(_partitionNumber).size()) {
 		unsigned int i;
 		for (i = 0;
@@ -801,7 +818,7 @@ void Predictor::getRootingNodes() {
 			if ( testNode == currentNode->number ) {
 				counter++;
 			} else {
-				/* each inner node should appear either 1 or 3 times */
+				/* each node should appear either 1 or 3 times */
 				assert ( counter == 0 || counter == 2);
 				if ( counter == 0 ) {
 					_missingSubtreesAncestors.push_back(currentNode);
