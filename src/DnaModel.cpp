@@ -33,13 +33,13 @@ using namespace std;
 
 namespace seqpred {
 
-DnaModel::DnaModel(partitionList * pllPartitions, int partitionIndex) :
+DnaModel::DnaModel(partitionList * pllPartitions, size_t partitionIndex) :
 		Model(pllPartitions, partitionIndex) {
 
 	assert (_pllPartitionInfo->states == NUM_NUC);
 
-	int numFreqs = NUM_NUC;
-	int numRates = (NUM_NUC - 1) * NUM_NUC / 2;
+	size_t numFreqs = NUM_NUC;
+	size_t numRates = (NUM_NUC - 1) * NUM_NUC / 2;
 	_frequencies.resize(numFreqs);
 	_substRates.resize(numRates);
 	memcpy(&(_frequencies[0]), _pllPartitionInfo->frequencies, numFreqs * sizeof(double));
@@ -62,13 +62,13 @@ DnaModel::~DnaModel() {
 void DnaModel::SetupGTR( void ) {
 
 	double fracchange = computeFracchange();
-	for (int i = 0; i < NUM_NUC; i++) {
+	for (size_t i = 0; i < NUM_NUC; i++) {
 		_eigenValues[i] = -_pllPartitionInfo->EIGN[i] / fracchange;
 	}
 
-	for (int i = 0; i < NUM_NUC; i++) {
-		for (int j = 0; j < NUM_NUC; j++) {
-			for (int k = 0; k < NUM_NUC; k++) {
+	for (size_t i = 0; i < NUM_NUC; i++) {
+		for (size_t j = 0; j < NUM_NUC; j++) {
+			for (size_t k = 0; k < NUM_NUC; k++) {
 				_Cijk[i * SQNUM_NUC + j * NUM_NUC + k] = _pllPartitionInfo->EI[i * NUM_NUC + k]
 										* _pllPartitionInfo->EV[j * NUM_NUC + k];
 			}
@@ -82,7 +82,7 @@ char DnaModel::getState(const double * pMatrix) const {
 	const double *P = pMatrix;
 	double r = Utils::genRand();
 	for (j=0; r>(*P) && j<NUM_NUC-1; j++) P++;
-	return (_charStates[pow(2,j)]);
+	return (_charStates[(size_t)pow(2,j)]);
 }
 
 char DnaModel::getMostProbableState(const double * probArray) const {
@@ -96,18 +96,17 @@ char DnaModel::getMostProbableState(const double * probArray) const {
 		}
 		P++;
 	}
-	return (_charStates[pow(2,maxPos)]);
+	return (_charStates[(size_t)pow(2,maxPos)]);
 }
 
 void DnaModel::setMatrix(double * matrix, double branchLength, bool cummulative) const {
-	int i, j, k;
 	double expt[NUM_NUC];
 	double *P;
 
 	P = matrix;
 	if (branchLength < 1e-6) {
-		for (i = 0; i < NUM_NUC; i++) {
-			for (j = 0; j < NUM_NUC; j++) {
+		for (size_t i = 0; i < NUM_NUC; i++) {
+			for (size_t j = 0; j < NUM_NUC; j++) {
 				if (i == j)
 					*P = 1.0;
 				else
@@ -118,13 +117,13 @@ void DnaModel::setMatrix(double * matrix, double branchLength, bool cummulative)
 		return;
 	}
 
-	for (k = 1; k < NUM_NUC; k++) {
+	for (size_t k = 1; k < NUM_NUC; k++) {
 		expt[k] = exp(branchLength * _eigenValues[k]);
 	}
-	for (i = 0; i < NUM_NUC; i++) {
-		for (j = 0; j < NUM_NUC; j++) {
+	for (size_t i = 0; i < NUM_NUC; i++) {
+		for (size_t j = 0; j < NUM_NUC; j++) {
 			(*P) = _Cijk[i * SQNUM_NUC + j * NUM_NUC + 0];
-			for (k = 1; k < NUM_NUC; k++) {
+			for (size_t k = 1; k < NUM_NUC; k++) {
 				(*P) += _Cijk[i * SQNUM_NUC + j * NUM_NUC + k] * expt[k];
 			}
 			P++;
@@ -134,18 +133,18 @@ void DnaModel::setMatrix(double * matrix, double branchLength, bool cummulative)
 	if (cummulative) {
 		/* the rows are cumulative to help with picking one using
 		 a random number */
-		for (int i = 0; i < NUM_NUC; i++) {
-			for (int j = 1; j < NUM_NUC; j++) {
-				int nextIndex = NUM_NUC * i + j;
+		for (size_t i = 0; i < NUM_NUC; i++) {
+			for (size_t j = 1; j < NUM_NUC; j++) {
+				size_t nextIndex = NUM_NUC * i + j;
 				matrix[nextIndex] += matrix[nextIndex - 1];
 			}
 			assert(Utils::floatEquals(matrix[NUM_NUC * (i + 1) - 1], 1.0));
 		}
 	} else {
 		/* the matrix rows sum to 1.0 */
-		for (int i = 0; i < NUM_NUC; i++) {
+		for (size_t i = 0; i < NUM_NUC; i++) {
 			double sum = 0.0;
-			for (int j = 0; j < NUM_NUC; j++) {
+			for (size_t j = 0; j < NUM_NUC; j++) {
 				sum += matrix[NUM_NUC * i + j];
 			}
 			assert(Utils::floatEquals(sum, 1.0));

@@ -40,7 +40,7 @@ public:
 	 * @param pllPartitions The PLL partition list
 	 * @param partitionIndex The current partition
 	 */
-	Model(partitionList * pllPartitions, int partitionIndex);
+	Model(partitionList * pllPartitions, size_t partitionIndex);
 
 	/**
 	 * @brief Copy constructor
@@ -83,7 +83,7 @@ public:
 	 * @param[in] state the state char
 	 * @return the index of the state
 	 */
-	int getStateIndex(char state) {
+	unsigned int getStateIndex(char state) {
 		return _statesToIntMap[state];
 	}
 
@@ -105,7 +105,7 @@ protected:
 	std::vector<double> _frequencies;     /** Frequencies */
 	std::vector<double> _substRates;      /** Substitution rates */
 	std::vector<char> _charStates;        /** Vector of the different states */
-	std::map<char, int> _statesToIntMap;  /** Map of the states index according to char */
+	std::map<char, unsigned int> _statesToIntMap;  /** Map of the states index according to char */
 };
 
 } /* namespace seqpred */

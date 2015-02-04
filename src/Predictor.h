@@ -38,7 +38,7 @@
 namespace seqpred {
 
 typedef struct {
-	unsigned int branchNumber;
+	size_t branchNumber;
 	double scaler;
 	double weight;
 } branchInfo;
@@ -56,7 +56,7 @@ public:
 	 * @param missingBranches The missing branches in the partition
 	 */
 	Predictor(pllInstance * tree, partitionList * partitions, pllAlignmentData * phylip,
-			unsigned int partitionNumber, std::vector<int> missingSequences,
+			unsigned int partitionNumber, std::vector<unsigned int> missingSequences,
 			const std::vector< std::vector<nodeptr> > * missingBranches);
 
 	/**
@@ -130,7 +130,7 @@ private:
 	 *
 	 * @return true, if the branch has missing data in the partition
 	 */
-	bool isMissingBranch(const nodeptr node, int partition) const;
+	bool isMissingBranch(const nodeptr node, size_t partition) const;
 
 	/**
 	 * @brief Mutates a sequence following the current model starting from the ancestor sequence
@@ -163,8 +163,8 @@ private:
 	 * @brief Predict the sequences for a whole subtree starting from Marginal Ancestral Probabilities
 	 *
 	 * @param node The node to evolve
-	 * @param ancestralProbabilities The marginal ancestral probabilites
-	 * @param n The number of sites
+	 * @param ancestralProbabilites The marginal ancestral probabilites
+	 * @param ancestralPMatrix The P matrix for the parent node
 	 */
 	void evolveNode(const nodeptr node, const double * ancestralProbabilites, double * ancestralPMatrix = 0);
 
@@ -172,6 +172,7 @@ private:
 	 * @brief Compute the branch length for a node
 	 *
 	 * @param node The node to compute the branch length
+	 *
 	 * @return The branch length
 	 */
 	double computeBranchLength(const nodeptr node) const;
@@ -219,7 +220,7 @@ private:
 	short * _catToSite;             /** Assignment of categories to sites */
 
 	std::vector<nodeptr> _missingSubtreesAncestors;                 /** Subtrees ancestors */
-	std::vector<int> _missingSequences;                             /** Vector of taxa with missing sequences */
+	std::vector<unsigned int> _missingSequences;                    /** Vector of taxa with missing sequences */
 	const std::vector< std::vector<nodeptr> > * _missingBranches;   /** Vector of sorted branches with missing sequences */
 	unsigned int _missingPartsCount;                                /** Number of predicted partitions */
 	Model * _currentModel;                                          /** Model for computing the P matrix */
