@@ -31,12 +31,12 @@
 #include <cstdio>
 #include <map>
 
-#define TEST_SIM 1
+#define TEST_SIM 0		  /** enable test features */
 
 #define EPSILON 1e-6		  /** epsilon for comparing floating point values */
 
-#define MIN_SCALER 1e-4
-#define MAX_SCALER 1e+4
+#define MIN_SCALER 1e-4		  /** minimum branch length scaler */
+#define MAX_SCALER 1e+4		  /** maximum branch length scaler */
 
 #define EX_OK EXIT_SUCCESS	  /** exit correctly */
 #define EX_UNIMPLEMENTED 1	  /** exit due to an unimplemented feature */
@@ -174,6 +174,13 @@ public:
 	 */
 	static std::vector< std::vector<nodeptr> > findMissingBranches ( pllInstance * pllTree, partitionList * pllPartitions, std::vector< std::vector<int> > missingSequences );
 
+	/**
+	 * @brief Allocate memory
+	 * @param n number of elements to allocate
+	 * @param el_size per-element size
+	 *
+	 * @return Pointer to the allocated memory. 0, if error
+	 */
 	static void * allocate(size_t n, size_t el_size);
 
 private:

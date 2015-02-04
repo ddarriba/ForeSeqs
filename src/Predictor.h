@@ -46,16 +46,33 @@ typedef struct {
 class Predictor {
 public:
 	/**
-	* @brief Construct a new Predictor for a single partition
-	*/
+	 * @brief Construct a new Predictor for a single partition
+	 *
+	 * @param tree The PLL instance
+	 * @param partitions The PLL partitions list
+	 * @param phylip The PLL alignment
+	 * @param partitionNumber The current partition
+	 * @param missingSequences The missing sequences in the partition
+	 * @param missingBranches The missing branches in the partition
+	 */
 	Predictor(pllInstance * tree, partitionList * partitions, pllAlignmentData * phylip,
 			unsigned int partitionNumber, std::vector<int> missingSequences,
 			const std::vector< std::vector<nodeptr> > * missingBranches);
+
+	/**
+	 * @brief Clone constructor
+	 */
 	Predictor(const Predictor&);
+
+	/**
+	 * @brief Destructor
+	 */
 	virtual ~Predictor( void );
 
 	/**
 	 * @brief Predict the missing sequences for all taxa
+	 *
+	 * @param[in] originalSequence Optional parameter for comparing the original against the predicted sequences (for testing purposes)
 	 */
 	void predictMissingSequences( const pllAlignmentData * originalSequence = 0 );
 
@@ -66,6 +83,8 @@ public:
 
 	/**
 	 * @brief Get the number of taxa with missing sequences
+	 *
+	 * @return The number of taxa with missing sequences
 	 */
 	unsigned int getNumberOfMissingSequences(void) const {
 		return (unsigned int) _missingSequences.size();
@@ -80,12 +99,16 @@ public:
 
 	/**
 	 * @brief Get the number of predicted partitions
+	 *
+	 * @return The number of predicted partitions
 	 */
 	unsigned int getMissingPartsCount(void) const {
 		return _missingPartsCount;
 	}
 
-
+	/**
+	 * Assign operator
+	 */
 	Predictor& operator=(const Predictor&);
 
 private:
@@ -94,6 +117,7 @@ private:
 	 * @brief Check whether the missing subtree ancestors vector contains the node
 	 *
 	 * @param[in] node The node under consideration
+	 *
 	 * @return true, if the node is an ancestor in the missing subtree
 	 */
 	bool isAncestor(nodeptr node) const;
@@ -101,31 +125,38 @@ private:
 	/**
 	 * @brief Check if the branch is missing in a partition
 	 *
-	 * @param node The node pointing to the branch
-	 * @param partition The partition
+	 * @param[in] node The node pointing to the branch
+	 * @param[in] partition The partition
 	 *
 	 * @return true, if the branch has missing data in the partition
 	 */
 	bool isMissingBranch(const nodeptr node, int partition) const;
 
 	/**
-	* @brief Mutates a sequence following the current model starting from the ancestor sequence
-	*
-	* @param[out] currentSequence The sequence to mutate
-	* @param ancestralSequence The ancestral
-	* @param branchLength The branch length
-	*/
+	 * @brief Mutates a sequence following the current model starting from the ancestor sequence
+	 *
+	 * @param[in,out] currentSequence The sequence to mutate
+	 * @param[in] ancestralSequence The ancestral
+	 * @param[in] branchLength The branch length
+	 */
 	void mutateSequence ( char * currentSequence, const char * ancestralSequence, double branchLength );
 
+	/**
+	 * @brief Mutates the P matrix starting from the ancestor sequence
+	 *        Multiplies the current P matrix by the ancestral P matrix
+	 * @param[in,out] currentPMatrix The P matrix to mutate, and also the result
+	 * @param[in] ancestralPMatrix The P matrix at the ancenstral node
+	 * @param branchLength The branch length
+	 */
 	void mutatePMatrix(double * currentPMatrix,
 			double * ancestralPMatrix, double branchLength);
 
 	/**
-	* @brief Predict the sequences for a whole subtree starting from an ancestral sequence
-	*
-	* @param node The node to evolve
-	* @param ancestralSequence The ancestral
-	*/
+	 * @brief Predict the sequences for a whole subtree starting from an ancestral sequence
+	 *
+	 * @param node The node to evolve
+	 * @param ancestralSequence The ancestral
+	 */
 	void evolveNode(const nodeptr node, const char * ancestralSequence);
 
 	/**
@@ -154,31 +185,48 @@ private:
 	*/
 	double getSumBranches(nodeptr node, int depth, double * weight) const;
 
+	/**
+	 * @brief Get the information about the same branch in partitions where it exists
+	 *
+	 * @param[in] node The node pointing to the input branch
+	 * @param[in] depth The depth of the branch in order to weight the scalers
+	 * @param[out] cumWeight The cumulative weight of the existing branches
+	 * @param[out] branches The list of the branches
+	 */
 	void getBranches(nodeptr node, int depth, double * cumWeight, std::vector<branchInfo> & branches) const;
+
+	/**
+	 * @brief Draws a branch length scaler from a distribution
+	 *
+	 * @return The branch length scaler
+	 */
 	double drawBranchLengthScaler( void ) const;
 
+	/**
+	 * @brief Finds all rooting nodes for the current partition
+	 */
 	void getRootingNodes();
 
-	pllInstance * _pllTree;				/** PLL instance */
-	partitionList * _pllPartitions;		/** PLL list of partitions */
-	pllAlignmentData * _pllAlignment;	/** PLL alignment data */
+	pllInstance * _pllTree;	                /** PLL instance */
+	partitionList * _pllPartitions;	        /** PLL list of partitions */
+	pllAlignmentData * _pllAlignment;       /** PLL alignment data */
 
-	unsigned int _partitionNumber;	/** Partition for predicting the sequences */
-	unsigned int _numberOfStates;	/** Number of different states (4 for NT, 20 for AA) */
-	unsigned int _start;			/** Starting position of the partition */
-	unsigned int _end; 				/** Ending position of the partition */
-	unsigned int _partitionLength;	/** Number of sites (length) of the partition */
-	short * _catToSite;				/** Assignment of categories to sites */
+	unsigned int _partitionNumber;  /** Partition for predicting the sequences */
+	unsigned int _numberOfStates;   /** Number of different states (4 for NT, 20 for AA) */
+	unsigned int _start;            /** Starting position of the partition */
+	unsigned int _end;              /** Ending position of the partition */
+	unsigned int _partitionLength;  /** Number of sites (length) of the partition */
+	short * _catToSite;             /** Assignment of categories to sites */
 
-	std::vector<nodeptr> _missingSubtreesAncestors;         /** Subtrees ancestors */
-	std::vector<int> _missingSequences;	                    /** Vector of taxa with missing sequences */
-	const std::vector< std::vector<nodeptr> > * _missingBranches; /** Vector of sorted branches with missing sequences */
-	unsigned int _missingPartsCount;	                    /** Number of predicted partitions */
-	Model * _currentModel;				                    /** Model for computing the P matrix */
+	std::vector<nodeptr> _missingSubtreesAncestors;                 /** Subtrees ancestors */
+	std::vector<int> _missingSequences;                             /** Vector of taxa with missing sequences */
+	const std::vector< std::vector<nodeptr> > * _missingBranches;   /** Vector of sorted branches with missing sequences */
+	unsigned int _missingPartsCount;                                /** Number of predicted partitions */
+	Model * _currentModel;                                          /** Model for computing the P matrix */
 
-	double _seqSimilarity;	/** Sequence similarity to original alignment (testing) **/
-	double _branchLengthScaler; /** Scaler for branch length modes 's' and 'd' */
-	std::vector<branchInfo> _scalers;	/** Vector of branch scalers information */
+	double _seqSimilarity;             /** Sequence similarity to original alignment (testing) **/
+	double _branchLengthScaler;        /** Scaler for branch length modes 's' and 'd' */
+	std::vector<branchInfo> _scalers;  /** Vector of branch scalers information */
 };
 
 } /* namespace seqpred */

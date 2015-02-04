@@ -34,9 +34,22 @@ namespace seqpred {
 class Model {
 public:
 
+	/**
+	 * @brief Constructs a new model
+	 *
+	 * @param pllPartitions The PLL partition list
+	 * @param partitionIndex The current partition
+	 */
 	Model(partitionList * pllPartitions, int partitionIndex);
+
+	/**
+	 * @brief Copy constructor
+	 */
 	Model(const Model&);
 
+	/**
+	 * @brief Destructor
+	 */
 	virtual ~Model();
 
 	/**
@@ -74,6 +87,9 @@ public:
 		return _statesToIntMap[state];
 	}
 
+	/**
+	 * @brief Clone operator
+	 */
 	Model& operator=(const Model&);
 
 protected:
@@ -85,11 +101,11 @@ protected:
 	 */
 	double computeFracchange( void ) const;
 
-	pInfo * _pllPartitionInfo;				/** PLL Partition info */
-	std::vector<double> _frequencies;		/** Frequencies */
-	std::vector<double> _substRates;		/** Substitution rates */
-	std::vector<char> _charStates;			/** Vector of the different states */
-	std::map<char, int> _statesToIntMap;	/** Map of the states index according to char */
+	pInfo * _pllPartitionInfo;            /** PLL Partition info */
+	std::vector<double> _frequencies;     /** Frequencies */
+	std::vector<double> _substRates;      /** Substitution rates */
+	std::vector<char> _charStates;        /** Vector of the different states */
+	std::map<char, int> _statesToIntMap;  /** Map of the states index according to char */
 };
 
 } /* namespace seqpred */
