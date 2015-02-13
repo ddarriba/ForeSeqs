@@ -31,7 +31,7 @@ using namespace std;
 
 namespace seqpred {
 
-Model::Model(partitionList * pllPartitions, int partitionIndex) :
+Model::Model(partitionList * pllPartitions, size_t partitionIndex) :
 		_pllPartitionInfo(pllPartitions->partitionData[partitionIndex]),
 		_frequencies(), _substRates(), _charStates(), _statesToIntMap() {
 }

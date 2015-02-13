@@ -71,32 +71,32 @@ bool Utils::floatEquals(double v1, double v2) {
 	return (std::abs(v1 - v2) <= EPSILON);
 }
 
-void transpose(double * m, int size)
+void Utils::transpose(double * m, size_t size)
 {
-    for (int i = 0; i < size; i++) {
-        for (int j = i + 1; j < size; j++) {
+    for (size_t i = 0; i < size; i++) {
+        for (size_t j = i + 1; j < size; j++) {
             std::swap(m[i*size + j], m[j*size + i]);
         }
     }
 }
 
-void Utils::matrixMultiply(int ncols, int nrows, const double * A,
+void Utils::matrixMultiply(size_t ncols, size_t nrows, const double * A,
 		double * B, double * result) {
 	assert(ncols == 4 || ncols == 20);
 		transpose(B, ncols);
-		for (int i = 0; i < nrows; i++) {
-			for (int j = 0; j < ncols; j++) {
+		for (size_t i = 0; i < nrows; i++) {
+			for (size_t j = 0; j < ncols; j++) {
 #ifdef __SSE3__
 				__m128d c = _mm_setzero_pd();
 
-				for (int k = 0; k < ncols; k += 2) {
+				for (size_t k = 0; k < ncols; k += 2) {
 					c = _mm_add_pd(c, _mm_mul_pd(_mm_load_pd(&A[i*ncols + k]), _mm_load_pd(&B[j*ncols + k])));
 				}
 				c = _mm_hadd_pd(c, c);
 				_mm_store_sd(&result[i*ncols + j], c);
 #else
 				double c = 0;
-				for (int k = 0; k < ncols; k++) {
+				for (size_t k = 0; k < ncols; k++) {
 					c += A[i * ncols + k] * B[j * ncols + k];
 				}
 				result[i * ncols + j] = c;
@@ -106,7 +106,7 @@ void Utils::matrixMultiply(int ncols, int nrows, const double * A,
 		transpose(B, ncols);
 }
 
-DataType Utils::getDataType(const partitionList * pllPartitions, int numberOfPartition) {
+DataType Utils::getDataType(const partitionList * pllPartitions, size_t numberOfPartition) {
 	switch (pllPartitions->partitionData[numberOfPartition]->states) {
 	case 4:
 		return DT_NUCLEIC;
@@ -131,11 +131,11 @@ double Utils::compareNucStates(unsigned char state0, unsigned char state1, bool 
 	}
 }
 
-vector< vector<int> > Utils::findMissingSequences( pllInstance * pllTree, partitionList * pllPartitions ) {
+vector< vector<unsigned int> > Utils::findMissingSequences( pllInstance * pllTree, partitionList * pllPartitions ) {
 
-	vector< vector<int> > missingSeqs(pllPartitions->numberOfPartitions);
+	vector< vector<unsigned int> > missingSeqs((size_t)pllPartitions->numberOfPartitions);
 
-	for (int part = 0; part < pllPartitions->numberOfPartitions; part++) {
+	for (size_t part = 0; part < (size_t)pllPartitions->numberOfPartitions; part++) {
 
 		unsigned char undefinedSite = (pllPartitions->partitionData[part]->states==4)?15:22;
 
@@ -143,7 +143,7 @@ vector< vector<int> > Utils::findMissingSequences( pllInstance * pllTree, partit
 			  end = pllPartitions->partitionData[part]->upper;
 
 		int missing;
-		for (int i = 1; i <= pllTree->mxtips; i++) {
+		for (unsigned int i = 1; i <= (unsigned int) pllTree->mxtips; i++) {
 			missing = 1;
 			for (int j = start; j < end; j++) {
 				missing &= (pllTree->yVector[i][j] == undefinedSite);
@@ -157,7 +157,8 @@ vector< vector<int> > Utils::findMissingSequences( pllInstance * pllTree, partit
 	return missingSeqs;
 }
 
-boolean Utils::subtreeIsMissing( pllInstance * pllTree, vector<int> * missingSequences, const nodeptr node, vector<nodeptr> * missingBranches ) {
+boolean Utils::subtreeIsMissing( pllInstance * pllTree, vector<unsigned int> * missingSequences, 
+	const nodeptr node, vector<nodeptr> * missingBranches ) {
 
 	if (find(missingBranches->begin(), missingBranches->end(), node)
 			!= missingBranches->end()) {
@@ -194,7 +195,8 @@ boolean Utils::subtreeIsMissing( pllInstance * pllTree, vector<int> * missingSeq
 	}
 }
 
-nodeptr Utils::findRootingNode( pllInstance * pllTree, vector<int> * missingSequences, nodeptr startingNode, vector<nodeptr> * missingBranches ) {
+nodeptr Utils::findRootingNode( pllInstance * pllTree, vector<unsigned int> * missingSequences, 
+	nodeptr startingNode, vector<nodeptr> * missingBranches ) {
 
 	nodeptr currentNode;
 
@@ -241,16 +243,16 @@ nodeptr Utils::findRootingNode( pllInstance * pllTree, vector<int> * missingSequ
 		}
 	}
 
-	return 0;
 }
 
 static bool compareNodes (nodeptr a, nodeptr b) { return (a->number < b->number); }
 
-std::vector< std::vector<nodeptr> > Utils::findMissingBranches ( pllInstance * pllTree, partitionList * pllPartitions, vector< vector<int> > missingSequences ) {
+std::vector< std::vector<nodeptr> > Utils::findMissingBranches ( pllInstance * pllTree, partitionList * pllPartitions, 
+	vector< vector<unsigned int> > missingSequences ) {
 
-	vector< vector<nodeptr> > missingBranches(pllPartitions->numberOfPartitions);
+	vector< vector<nodeptr> > missingBranches((size_t)pllPartitions->numberOfPartitions);
 
-	for (int part = 0; part < pllPartitions->numberOfPartitions; part++) {
+	for (size_t part = 0; part < (size_t)pllPartitions->numberOfPartitions; part++) {
 		while (missingSequences[part].size()) {
 			nodeptr startingNode =
 					pllTree->nodep[missingSequences[part][0]]->back;

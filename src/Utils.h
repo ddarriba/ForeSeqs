@@ -31,12 +31,12 @@
 #include <cstdio>
 #include <map>
 
-#define TEST_SIM 1
+#define TEST_SIM 0		  /** enable test features */
 
 #define EPSILON 1e-6		  /** epsilon for comparing floating point values */
 
-#define MIN_SCALER 1e-4
-#define MAX_SCALER 1e+4
+#define MIN_SCALER 1e-4		  /** minimum branch length scaler */
+#define MAX_SCALER 1e+4		  /** maximum branch length scaler */
 
 #define EX_OK EXIT_SUCCESS	  /** exit correctly */
 #define EX_UNIMPLEMENTED 1	  /** exit due to an unimplemented feature */
@@ -121,7 +121,7 @@ public:
 	/**
 	 * @brief Multiply A x B matrices
 	 */
-	static void matrixMultiply(int columns, int rows, const double * A, double * B, double * result);
+	static void matrixMultiply(size_t columns, size_t rows, const double * A, double * B, double * result);
 
 	/**
 	 * @brief Gets the data type (NT or AA) according to the number of states
@@ -131,7 +131,7 @@ public:
 	 *
 	 * @return the data type (DT_NUCLEIC or DT_PROTEIC)
 	 */
-	static DataType getDataType(const partitionList * pllPartitions, int numberOfPartition);
+	static DataType getDataType(const partitionList * pllPartitions, size_t numberOfPartition);
 
 	/**
 	 * @brief Compare 2 nucleotide states
@@ -150,7 +150,7 @@ public:
 	 *
 	 * @return The list of missing sequences in the tree
 	 */
-	static std::vector< std::vector<int> > findMissingSequences ( pllInstance * pllTree, partitionList * pllPartitions );
+	static std::vector< std::vector<unsigned int> > findMissingSequences ( pllInstance * pllTree, partitionList * pllPartitions );
 
 	/**
 	 * @brief Return the rooting node for a missing branch
@@ -162,7 +162,8 @@ public:
 	 *
 	 * @return The rooting node
 	 */
-	static nodeptr findRootingNode( pllInstance * pllTree, std::vector<int> * missingSequences, nodeptr startingNode, std::vector<nodeptr> * missingBranches );
+	static nodeptr findRootingNode( pllInstance * pllTree, std::vector<unsigned int> * missingSequences, 
+		nodeptr startingNode, std::vector<nodeptr> * missingBranches );
 
 	/**
 	 * @brief Get the list of missing branches for every partition
@@ -172,8 +173,16 @@ public:
 	 *
 	 * @return The list of missing branches in the tree
 	 */
-	static std::vector< std::vector<nodeptr> > findMissingBranches ( pllInstance * pllTree, partitionList * pllPartitions, std::vector< std::vector<int> > missingSequences );
+	static std::vector< std::vector<nodeptr> > findMissingBranches ( pllInstance * pllTree, 
+		partitionList * pllPartitions, std::vector< std::vector<unsigned int> > missingSequences );
 
+	/**
+	 * @brief Allocate memory
+	 * @param n number of elements to allocate
+	 * @param el_size per-element size
+	 *
+	 * @return Pointer to the allocated memory. 0, if error
+	 */
 	static void * allocate(size_t n, size_t el_size);
 
 private:
@@ -188,7 +197,16 @@ private:
 	 *
 	 * @return The rooting node
 	 */
-	static boolean subtreeIsMissing( pllInstance * pllTree, std::vector<int> * missingSequences, const nodeptr node, std::vector<nodeptr> * missingBranches );
+	static boolean subtreeIsMissing( pllInstance * pllTree, std::vector<unsigned int> * missingSequences, 
+		const nodeptr node, std::vector<nodeptr> * missingBranches );
+
+	/**
+	 * @brief Transposes a matrix
+	 *
+	 * @param[in,out] m The matrix
+	 * @param size The size of the matrix
+	 */
+	static void transpose(double * m, size_t size);
 };
 
 extern BLMode branchLengthsMode;		/** Mode for stealing the branch lengths */

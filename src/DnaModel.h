@@ -34,7 +34,15 @@ namespace seqpred {
 
 class DnaModel: public Model {
 public:
-	DnaModel(partitionList * pllPartitions, int partitionIndex);
+
+	/**
+	 * @brief Constructs a new DNA model
+	 *
+	 * @param pllPartitions The PLL partition list
+	 * @param partitionIndex The current partition
+	 */
+	DnaModel(partitionList * pllPartitions, size_t partitionIndex);
+
 	virtual void setMatrix(double * pMatrix, double branchLength, bool cummulative = true) const;
 	virtual char getState(const double * pMatrix) const;
 	virtual char getMostProbableState(const double * probArray) const;
@@ -46,8 +54,8 @@ private:
 	 */
 	void SetupGTR( void );
 
-	double _Cijk[CUNUM_NUC];
-	double _eigenValues[NUM_NUC];
+	double _Cijk[CUNUM_NUC];        /** The cumulative transition probability matrix */
+	double _eigenValues[NUM_NUC];   /** Eigenvalues */
 };
 
 } /* namespace seqpred */

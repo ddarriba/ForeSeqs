@@ -198,8 +198,8 @@ int main(int argc, char * argv[]) {
 						cerr << "[ERROR] Invalid branch length stealing mode: " << optarg << endl;
 						exit(EX_IOERR);
 					}
-					char catMode = optarg[0];
-					switch(catMode) {
+					char branchMode = optarg[0];
+					switch(branchMode) {
 					case 'a':
 						seqpred::branchLengthsMode = seqpred::BL_AVERAGE;
 						break;
@@ -240,7 +240,6 @@ int main(int argc, char * argv[]) {
 		}
 		case 'h':
 			exit_with_usage(argv[0]);
-			break;
 		case 'i':
 			inputfile = optarg;
 			break;
@@ -535,7 +534,7 @@ int main(int argc, char * argv[]) {
 	cout << "Initiial inference done. It took " << currentTime - startTime << " seconds." << endl << endl;
 
 	/* Find missing sequences and branches */
-	vector<vector<int> > missingSequences =  seqpred::Utils::findMissingSequences(pllTree, pllPartitions);
+	vector<vector<unsigned int> > missingSequences =  seqpred::Utils::findMissingSequences(pllTree, pllPartitions);
 	vector<vector<nodeptr> > missingBranches = seqpred::Utils::findMissingBranches(pllTree, pllPartitions, missingSequences);
 
 #ifdef PRINT_TRACE
@@ -543,10 +542,10 @@ int main(int argc, char * argv[]) {
 			pllTree->start->back, true, true, true, false, false,
 			PLL_SUMMARIZE_LH, false, false);
 	cout << pllTree->tree_string << endl;
-	for (int i = 0; i < missingBranches.size(); i++) {
+	for (size_t i = 0; i < missingBranches.size(); i++) {
 		cout << "PARTITION " << i << "/" << missingBranches.size() << endl;
 		cout << "  Branches: " << missingBranches[i].size() << endl;
-		for (int j = 0; j < missingBranches[i].size(); j++) {
+		for (size_t j = 0; j < missingBranches[i].size(); j++) {
 			cout << "    * " << missingBranches[i][j]->number << endl;
 		}
 	}

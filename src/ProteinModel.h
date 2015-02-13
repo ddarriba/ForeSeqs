@@ -34,7 +34,15 @@ namespace seqpred {
 
 class ProteinModel: public Model {
 public:
-	ProteinModel(partitionList * pllPartitions, int partitionIndex);
+
+	/**
+	 * @brief Constructs a new protein model
+	 *
+	 * @param pllPartitions The PLL partition list
+	 * @param partitionIndex The current partition
+	 */
+	ProteinModel(partitionList * pllPartitions, size_t partitionIndex);
+
 	virtual void setMatrix(double * pMatrix, double branchLength, bool cummulative = true) const;
 	virtual char getState(const double * pMatrix) const;
 	virtual char getMostProbableState(const double * probArray) const;
@@ -46,8 +54,8 @@ private:
 	 */
 	void SetupGTR( void );
 
-	double _Cijk[CUNUM_AA];
-	double _eigenValues[NUM_AA];
+	double _Cijk[CUNUM_AA];       /** The cumulative transition probability matrix */
+	double _eigenValues[NUM_AA];  /** Eigenvalues */
 };
 
 } /* namespace seqpred */

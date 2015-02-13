@@ -48,7 +48,7 @@ namespace seqpred {
 
 Predictor::Predictor(pllInstance * tree, partitionList * partitions,
 		pllAlignmentData * phylip, unsigned int partitionNumber,
-		std::vector<int> missingSequences,
+		std::vector<unsigned int> missingSequences,
 		const std::vector< std::vector<nodeptr> > * missingBranches) :
 		_pllTree(tree), _pllPartitions(partitions), _pllAlignment(phylip),
 				_partitionNumber(partitionNumber), _numberOfStates(0),
@@ -70,14 +70,14 @@ Predictor::Predictor(pllInstance * tree, partitionList * partitions,
 	}
 
 	/* get taxa with missing data in the partition */
-	_missingPartsCount = _missingSequences.size();
+	_missingPartsCount = (unsigned int)_missingSequences.size();
 
 	if (_missingSequences.size()) {
 		if (categoriesMode != CAT_AVERAGE) {
 			_catToSite = (short *) calloc((size_t) _partitionLength, sizeof(short));
 			unsigned int * catToSiteCount;
 			catToSiteCount = (unsigned int *) alloca (numberOfRateCategories*sizeof (unsigned int));
-			for (unsigned int k = 0; k < numberOfRateCategories; k++) {
+			for (size_t k = 0; k < numberOfRateCategories; k++) {
 				catToSiteCount[k] = 0;
 			}
 			if (categoriesMode == CAT_RANDOM) {
@@ -102,11 +102,11 @@ Predictor::Predictor(pllInstance * tree, partitionList * partitions,
 						numberOfRateCategories * sizeof(double));
 
 				/* initialize the per-site likelihoods to a lower bound, e.g., the global likelihood */
-				for (unsigned int i = 0; i < _partitionLength; i++) {
+				for (size_t i = 0; i < _partitionLength; i++) {
 					perSiteLikelihoods[i] = _pllTree->likelihood;
 				}
 
-				for (unsigned int k = 0; k < numberOfRateCategories; k++) {
+				for (short k = 0; k < (short)numberOfRateCategories; k++) {
 
 					/* set all gamma rates to the same value */
 					for (unsigned int i = 0; i < numberOfRateCategories; i++) {
@@ -121,7 +121,7 @@ Predictor::Predictor(pllInstance * tree, partitionList * partitions,
 					double * X =
 							_pllPartitions->partitionData[partitionNumber]->perSiteLikelihoods;
 					double * Y = perSiteLikelihoods;
-					for (unsigned int i = 0; i < _partitionLength; i++) {
+					for (size_t i = 0; i < _partitionLength; i++) {
 						/* if likelihood improves, set this category */
 						if (*X > *Y) {
 							*Y = *X;
@@ -227,12 +227,16 @@ void Predictor::mutateSequence(char * currentSequence,
 	/* start mutating the ancestral sequence */
 	strcpy(currentSequence, ancestralSequence);
 
-	pllMakeGammaCats(_pllPartitions->partitionData[_partitionNumber]->alpha, gammaRates, numberOfRateCategories, false);
+	pllMakeGammaCats(_pllPartitions->partitionData[_partitionNumber]->alpha, gammaRates, (int)numberOfRateCategories, false);
 
 	seqPtr = currentSequence;
 
 	/* construct and validate P matrix */
-	double matrix[numberOfRateCategories][_numberOfStates*_numberOfStates];
+	double ** matrix = new double*[numberOfRateCategories];
+	for (size_t i=0; i<numberOfRateCategories; i++) {
+		matrix[i] = new double[_numberOfStates*_numberOfStates];
+	}
+
 	for (unsigned int i = 0; i < numberOfRateCategories; i++) {
 		_currentModel->setMatrix(matrix[i], gammaRates[i] * branchLength);
 		for (unsigned int j = 0; j < _numberOfStates; j++) {
@@ -260,7 +264,7 @@ void Predictor::mutateSequence(char * currentSequence,
 		for (unsigned int i = 0; i < _partitionLength; i++) {
 			char newState = _currentModel->getState(
 					averageMatrix
-							+ (_currentModel->getStateIndex(*seqPtr)
+					+ (_currentModel->getStateIndex(*seqPtr)
 									* _numberOfStates));
 			if (*seqPtr != newState) substitutionsCount++;
 			*seqPtr = newState;
@@ -285,6 +289,12 @@ void Predictor::mutateSequence(char * currentSequence,
 		break;
 	}
 	}
+
+	for (size_t i=0; i<numberOfRateCategories; i++) {
+		delete[] matrix[i];
+	}
+	delete[] matrix;
+	
 	cout << "    - Substitutions from ancestral = " << setprecision(2) << (double)100.0*substitutionsCount/_partitionLength << "%" << endl;
 }
 
@@ -311,7 +321,7 @@ void printBranchLengths(pllInstance * _pllTree, partitionList * _pllPartitions) 
 
 double Predictor::drawBranchLengthScaler( void ) const {
 	double r = Utils::genRand();
-	int j=0;
+	size_t j;
 	branchInfo bInfo = _scalers[0];
 	for (j=0; r>bInfo.weight; j++) bInfo=_scalers[j+1];
 	return (_scalers[j].scaler);
@@ -346,14 +356,14 @@ double Predictor::computeBranchLength(const nodeptr node) const {
 			if (!isMissingBranch(node, i)) {
 				double factor = (double) _pllPartitions->partitionData[i]->width / (double) sumwgt;
 				sumFactors += factor;
-				double currentBL = pllGetBranchLength(_pllTree, node, i) * factor;
+				double currentBL = pllGetBranchLength(_pllTree, node, (int) i) * factor;
 				branchLength += currentBL;
 			}
 		}
 		assert(Utils::floatEquals(sumFactors, 1.0));
 	} else {
 		/* return the current and only branch length */
-		branchLength = pllGetBranchLength(_pllTree, node, _partitionNumber);
+		branchLength = pllGetBranchLength(_pllTree, node, (int)_partitionNumber);
 	}
 
 	switch (branchLengthsMode) {
@@ -393,7 +403,7 @@ bool Predictor::isAncestor(nodeptr node) const {
 	return true;
 }
 
-bool Predictor::isMissingBranch(const nodeptr node, int partition) const {
+bool Predictor::isMissingBranch(const nodeptr node, size_t partition) const {
 	if (find(_missingBranches->at(partition).begin(),
 			_missingBranches->at(partition).end(), node)
 				== _missingBranches->at(partition).end())
@@ -422,7 +432,7 @@ void Predictor::getBranches(nodeptr node, int depth, double * cumWeight, vector<
 			/* add to scaler only if there is info in other partitions */
 			if (sumWgt > 0) {
 
-				double branchLength = pllGetBranchLength(_pllTree, node, _partitionNumber);
+				double branchLength = pllGetBranchLength(_pllTree, node, (int)_partitionNumber);
 
 				/* compute the current weighted branch length ratio */
 				double sumFactors = 0.0;
@@ -430,7 +440,7 @@ void Predictor::getBranches(nodeptr node, int depth, double * cumWeight, vector<
 						i < (unsigned int) _pllPartitions->numberOfPartitions;
 						i++) {
 					if (_partitionNumber != i && !isMissingBranch(node, i)) {
-						double curBranchLength = pllGetBranchLength(_pllTree, node, i);
+						double curBranchLength = pllGetBranchLength(_pllTree, node, (int)i);
 						double factor =
 								(double) _pllPartitions->partitionData[i]->width
 										/ (double) sumWgt;
@@ -456,7 +466,7 @@ void Predictor::getBranches(nodeptr node, int depth, double * cumWeight, vector<
 
 				/* add the new sample */
 				branchInfo bInfo;
-				bInfo.branchNumber = node->number;
+				bInfo.branchNumber = (size_t) node->number;
 				bInfo.scaler = ratio;
 				bInfo.weight = curWeight;
 				branches.push_back(bInfo);
@@ -502,7 +512,7 @@ double Predictor::getSumBranches(nodeptr node, int depth, double * weight) const
 			if (sumWgt > 0) {
 
 				double branchLength = pllGetBranchLength(_pllTree, node,
-						_partitionNumber);
+						(int) _partitionNumber);
 
 				/* compute the current weighted branch length ratio */
 				double sumFactors = 0.0;
@@ -512,7 +522,7 @@ double Predictor::getSumBranches(nodeptr node, int depth, double * weight) const
 
 					if (_partitionNumber != i && !isMissingBranch(node, i)) {
 
-						double curBranchLength = pllGetBranchLength(_pllTree, node, i);
+						double curBranchLength = pllGetBranchLength(_pllTree, node, (int)i);
 						double factor =
 								(double) _pllPartitions->partitionData[i]->width
 										/ (double) sumWgt;
@@ -613,7 +623,7 @@ void Predictor::evolveNode(const nodeptr node, const double * ancestralProbabili
 				(size_t) numberOfRateCategories * _numberOfStates * n,
 				sizeof(double));
 
-		for (int cat = 0; cat < (int)numberOfRateCategories; cat++) {
+		for (size_t cat = 0; cat < numberOfRateCategories; cat++) {
 			if (ancestralPMatrix) {
 #ifdef _USE_OPENBLAS_
 				cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans,
@@ -632,29 +642,29 @@ void Predictor::evolveNode(const nodeptr node, const double * ancestralProbabili
 						_numberOfStates * n * sizeof(double));
 			}
 
-			if (USE_FIXED_ANCESTRAL) {
-				double * M = &currentProbabilities[cat * _numberOfStates * n];
-				for (unsigned int i = 0; i < n; i++) {
-					double sum = 0.0;
-					for (unsigned int j = 0; j < _numberOfStates; j++) {
-						int nextIndex = _numberOfStates * i + j;
-						sum += M[nextIndex];
-					}
-					assert(Utils::floatEquals(sum, 1.0));
+#ifdef USE_FIXED_ANCESTRAL
+			double * M = &currentProbabilities[cat * _numberOfStates * n];
+			for (unsigned int i = 0; i < n; i++) {
+				double sum = 0.0;
+				for (unsigned int j = 0; j < _numberOfStates; j++) {
+					size_t nextIndex = _numberOfStates * i + j;
+					sum += M[nextIndex];
 				}
-			} else {
-				/* Make M matrix cummulative */
-				double * M = &currentProbabilities[cat * _numberOfStates * n];
-				for (unsigned int i = 0; i < n; i++) {
-					for (unsigned int j = 1; j < _numberOfStates; j++) {
-						int nextIndex = _numberOfStates * i + j;
-						M[nextIndex] += M[nextIndex - 1];
-					}
-					assert(
-							Utils::floatEquals(M[_numberOfStates * (i + 1) - 1],
-									1.0));
-				}
+				assert(Utils::floatEquals(sum, 1.0));
 			}
+#else
+			/* Make M matrix cummulative */
+			double * M = &currentProbabilities[cat * _numberOfStates * n];
+			for (unsigned int i = 0; i < n; i++) {
+				for (unsigned int j = 1; j < _numberOfStates; j++) {
+					size_t nextIndex = _numberOfStates * i + j;
+					M[nextIndex] += M[nextIndex - 1];
+				}
+				assert(
+						Utils::floatEquals(M[_numberOfStates * (i + 1) - 1],
+								1.0));
+			}
+#endif
 		}
 
 		/* draw random ancestral states */
@@ -663,34 +673,33 @@ void Predictor::evolveNode(const nodeptr node, const double * ancestralProbabili
 		case CAT_AVERAGE: {
 			cerr << "Not implemented yet" << endl;
 			exit(EX_UNIMPLEMENTED);
-			break;
 		}
 		case CAT_RANDOM:
 		case CAT_ESTIMATE: {
 
 			short * siteCatPtr = _catToSite;
 			char * seqPtr = ancestralSequence;
-			if (USE_FIXED_ANCESTRAL) {
-				for (unsigned int i = 0; i < _partitionLength; i++) {
-					char newState = _currentModel->getMostProbableState(
-							&currentProbabilities[(*siteCatPtr)
-									* _numberOfStates * _partitionLength
-									+ i * _numberOfStates]);
-					*seqPtr = newState;
-					seqPtr++;
-					siteCatPtr++;
-				}
-			} else {
-				for (unsigned int i = 0; i < _partitionLength; i++) {
-					char newState = _currentModel->getState(
-							&currentProbabilities[(*siteCatPtr)
-									* _numberOfStates * _partitionLength
-									+ i * _numberOfStates]);
-					*seqPtr = newState;
-					seqPtr++;
-					siteCatPtr++;
-				}
+#ifdef USE_FIXED_ANCESTRAL
+			for (unsigned int i = 0; i < _partitionLength; i++) {
+				char newState = _currentModel->getMostProbableState(
+						&currentProbabilities[(size_t)(*siteCatPtr)
+								* _numberOfStates * _partitionLength
+								+ i * _numberOfStates]);
+				*seqPtr = newState;
+				seqPtr++;
+				siteCatPtr++;
 			}
+#else
+			for (unsigned int i = 0; i < _partitionLength; i++) {
+				char newState = _currentModel->getState(
+						&currentProbabilities[(*siteCatPtr)
+								* _numberOfStates * _partitionLength
+								+ i * _numberOfStates]);
+				*seqPtr = newState;
+				seqPtr++;
+				siteCatPtr++;
+			}
+#endif
 			break;
 		}
 		}
@@ -716,7 +725,7 @@ void Predictor::mutatePMatrix(double * currentPMatrix,
 
 	double * gammaRates = (double *) alloca (numberOfRateCategories * sizeof(double));
 
-	pllMakeGammaCats(_pllPartitions->partitionData[_partitionNumber]->alpha, gammaRates, numberOfRateCategories, false);
+	pllMakeGammaCats(_pllPartitions->partitionData[_partitionNumber]->alpha, gammaRates, (int)numberOfRateCategories, false);
 
 	/* construct and validate P matrix */
 	double * matrix = (double *) Utils::allocate(
@@ -740,8 +749,8 @@ void Predictor::mutatePMatrix(double * currentPMatrix,
 
 	if (ancestralPMatrix) {
 		/* multiply P matrices */
-		int n = _numberOfStates;
-		for (int cat = 0; cat < (int) numberOfRateCategories; cat++) {
+		size_t n = _numberOfStates;
+		for (size_t cat = 0; cat < numberOfRateCategories; cat++) {
 			double * catMatrix = &(matrix[cat * _numberOfStates
 					* _numberOfStates]);
 #ifdef _USE_OPENBLAS_
@@ -861,7 +870,7 @@ void Predictor::predictMissingSequences( const pllAlignmentData * originalSequen
 	}
 #endif
 
-	vector<int> missingSequencesCopy;
+	vector<unsigned int> missingSequencesCopy;
 	if (originalSequence) {
 		missingSequencesCopy = _missingSequences;
 	}
@@ -970,7 +979,7 @@ void Predictor::predictMissingSequences( const pllAlignmentData * originalSequen
 			free(ancestral);
 
 			/* extract the ancestral for the partition */
-			size_t partProbsSize = (probsSize/sequenceLength) * _partitionLength;
+			size_t partProbsSize = ((size_t)probsSize/sequenceLength) * _partitionLength;
 
 			double * probsAncestral = (double *) Utils::allocate(partProbsSize,
 					sizeof(double));
@@ -988,7 +997,7 @@ void Predictor::predictMissingSequences( const pllAlignmentData * originalSequen
 			/* compute similarity */
 			_seqSimilarity = 0.0;
 			for (size_t i=0; i<missingSequencesCopy.size(); i++) {
-				int seq = missingSequencesCopy[i];
+				unsigned int seq = missingSequencesCopy[i];
 				double simCount = 0.0;
 				unsigned int seqLen = 0;
 				if (Utils::getDataType(_pllPartitions, _partitionNumber)
