@@ -9,8 +9,6 @@ seqpred_SOURCES = \
 	Utils.cpp
 seqpred_CFLAGS = -g -O3 -Wall $(SIMD_FLAGS)
 seqpred_CPPFLAGS = -g -O3 -Wall $(SIMD_FLAGS)
-# seqpred_LDFLAGS = -Llibpll/lib -lpll-sse3-pthreads -lm -lpthread
 seqpred_LDFLAGS = -g -O3 -Wall
 
-# pkgincludedir=$(includedir)/pll
 pkginclude_HEADERS = Predictor.h DnaModel.h ProteinModel.h Model.h Utils.h

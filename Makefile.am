@@ -8,6 +8,5 @@
 # WITHOUT ANY WARRANTY, to the extent permitted by law; without even the
 # implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
-# EXTRA_DIST = reconf configure
-EXTRA_DIST = configure
+EXTRA_DIST = testdata
 SUBDIRS = src m4 
