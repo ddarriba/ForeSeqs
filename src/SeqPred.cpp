@@ -295,8 +295,12 @@ int main(int argc, char * argv[]) {
 
 	srand(randomNumberSeed);
 	if (argc == 1) {
-		inputfile = "testdata/alignment";
-		treefile = "testdata/tree";
+		/* Test run */
+		cout << endl << "****** TEST RUN ******" << endl << endl;
+		inputfile      = "testdata/alignment";
+		partitionsfile = "testdata/partitions";
+		partitionsFileDefined = true;
+		treefile       = "testdata/tree";
 	} else {
 		if (inputfile.length() == 0) {
 			cerr << "Alignment file (-i) is required" << endl;
