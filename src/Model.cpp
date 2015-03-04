@@ -24,6 +24,7 @@
 #include "Model.h"
 #include "Utils.h"
 
+#include <cmath>
 #include <cassert>
 #include <alloca.h>
 
@@ -82,6 +83,60 @@ double Model::computeFracchange( void ) const {
 			fracchange += _frequencies[j] * r[j*numberOfStates+k] * _frequencies[k];
 	return fracchange;
 
+}
+
+void Model::constructPMatrix(double * matrix, double branchLength, bool cummulative, size_t numStates, const double * eigenValues, const double * Cijk) {
+	double expt[numStates];
+	double *P;
+	size_t squaredNumStates = numStates * numStates;
+
+	P = matrix;
+	if (branchLength < 1e-6) {
+		for (size_t i = 0; i < numStates; i++) {
+			for (size_t j = 0; j < numStates; j++) {
+				if (i == j)
+					*P = 1.0;
+				else
+					*P = 0.0;
+				P++;
+			}
+		}
+		return;
+	}
+
+	for (size_t k = 1; k < numStates; k++) {
+		expt[k] = exp(branchLength * eigenValues[k]);
+	}
+	for (size_t i = 0; i < numStates; i++) {
+		for (size_t j = 0; j < numStates; j++) {
+			(*P) = Cijk[i * squaredNumStates + j * numStates + 0];
+			for (size_t k = 1; k < numStates; k++) {
+				(*P) += Cijk[i * squaredNumStates + j * numStates + k] * expt[k];
+			}
+			P++;
+		}
+	}
+
+	if (cummulative) {
+		/* the rows are cumulative to help with picking one using
+		 a random number */
+		for (size_t i = 0; i < numStates; i++) {
+			for (size_t j = 1; j < numStates; j++) {
+				size_t nextIndex = numStates * i + j;
+				matrix[nextIndex] += matrix[nextIndex - 1];
+			}
+			assert(Utils::floatEquals(matrix[numStates * (i + 1) - 1], 1.0));
+		}
+	} else {
+		/* the matrix rows sum to 1.0 */
+		for (size_t i = 0; i < numStates; i++) {
+			double sum = 0.0;
+			for (size_t j = 0; j < numStates; j++) {
+				sum += matrix[numStates * i + j];
+			}
+			assert(Utils::floatEquals(sum, 1.0));
+		}
+	}
 }
 
 } /* namespace seqpred */

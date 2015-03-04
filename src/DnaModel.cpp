@@ -99,58 +99,8 @@ char DnaModel::getMostProbableState(const double * probArray) const {
 	return (_charStates[(size_t)pow(2,maxPos)]);
 }
 
-void DnaModel::setMatrix(double * matrix, double branchLength, bool cummulative) const {
-	double expt[NUM_NUC];
-	double *P;
-
-	P = matrix;
-	if (branchLength < 1e-6) {
-		for (size_t i = 0; i < NUM_NUC; i++) {
-			for (size_t j = 0; j < NUM_NUC; j++) {
-				if (i == j)
-					*P = 1.0;
-				else
-					*P = 0.0;
-				P++;
-			}
-		}
-		return;
-	}
-
-	for (size_t k = 1; k < NUM_NUC; k++) {
-		expt[k] = exp(branchLength * _eigenValues[k]);
-	}
-	for (size_t i = 0; i < NUM_NUC; i++) {
-		for (size_t j = 0; j < NUM_NUC; j++) {
-			(*P) = _Cijk[i * SQNUM_NUC + j * NUM_NUC + 0];
-			for (size_t k = 1; k < NUM_NUC; k++) {
-				(*P) += _Cijk[i * SQNUM_NUC + j * NUM_NUC + k] * expt[k];
-			}
-			P++;
-		}
-	}
-
-	if (cummulative) {
-		/* the rows are cumulative to help with picking one using
-		 a random number */
-		for (size_t i = 0; i < NUM_NUC; i++) {
-			for (size_t j = 1; j < NUM_NUC; j++) {
-				size_t nextIndex = NUM_NUC * i + j;
-				matrix[nextIndex] += matrix[nextIndex - 1];
-			}
-			assert(Utils::floatEquals(matrix[NUM_NUC * (i + 1) - 1], 1.0));
-		}
-	} else {
-		/* the matrix rows sum to 1.0 */
-		for (size_t i = 0; i < NUM_NUC; i++) {
-			double sum = 0.0;
-			for (size_t j = 0; j < NUM_NUC; j++) {
-				sum += matrix[NUM_NUC * i + j];
-			}
-			assert(Utils::floatEquals(sum, 1.0));
-		}
-	}
-
+void DnaModel::setMatrix(double * matrix, double branchLength, bool cummulative) {
+	constructPMatrix(matrix, branchLength, cummulative, NUM_NUC, _eigenValues, _Cijk);
 }
 
 } /* namespace seqpred */

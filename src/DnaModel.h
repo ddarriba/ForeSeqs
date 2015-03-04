@@ -43,7 +43,7 @@ public:
 	 */
 	DnaModel(partitionList * pllPartitions, size_t partitionIndex);
 
-	virtual void setMatrix(double * pMatrix, double branchLength, bool cummulative = true) const;
+	virtual void setMatrix(double * pMatrix, double branchLength, bool cummulative = true);
 	virtual char getState(const double * pMatrix) const;
 	virtual char getMostProbableState(const double * probArray) const;
 	virtual ~DnaModel();

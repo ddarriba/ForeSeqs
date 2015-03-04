@@ -59,7 +59,7 @@ public:
 	 * @param[in] branchLength the branch length
 	 * @param[in] cummulative if true, the matrix columns are cummulative
 	 */
-	virtual void setMatrix(double * pMatrix, double branchLength, bool cummulative = true) const = 0;
+	virtual void setMatrix(double * pMatrix, double branchLength, bool cummulative = true) = 0;
 
 	/**
 	 * @brief Get the randomly selected state according to a probability matrix
@@ -100,6 +100,18 @@ protected:
 	 * @return the fracchange
 	 */
 	double computeFracchange( void ) const;
+
+	/**
+	 * @brief Compute the P-Matrix for selecting the character to insert
+	 *
+	 * @param[out] pMatrix the (already allocated) P matrix
+	 * @param[in] branchLength the branch length
+	 * @param[in] cummulative if true, the matrix columns are cummulative
+	 * @param[in] numStates the number of states
+	 * @param[in] eigenValues the EIGEN values
+	 * @param[in] Cijk the probabilities
+	 */
+	void constructPMatrix(double * pMatrix, double branchLength, bool cummulative, size_t numStates, const double * eigenValues, const double * Cijk);
 
 	pInfo * _pllPartitionInfo;            /** PLL Partition info */
 	std::vector<double> _frequencies;     /** Frequencies */
