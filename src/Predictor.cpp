@@ -383,10 +383,19 @@ double Predictor::computeBranchLength(const nodeptr node) const {
 	/* branch length correction */
 	branchLength = max(branchLength, MIN_BR_LEN);
 
+#if(TEST_SIM)
+	pllSetBranchLength(_pllTree,_pllPartitions, node, (int)_partitionNumber, branchLength);
+#endif
+
 	return branchLength;
 }
 
+/* WMOD=0 -> No correction-for-distance */
+#if(CFD)
 #define WMOD 0.5
+#else
+#define WMOD 0
+#endif
 #define WMEAN 0
 #define WSIGMA 1
 
@@ -812,11 +821,11 @@ void Predictor::getRootingNodes() {
 	assert ( !_missingSubtreesAncestors.size() );
 
 
+#ifdef DEBUG_BRANCHES
 	pllTreeToNewick(_pllTree->tree_string, _pllTree, _pllPartitions,
 				_pllTree->start->back, false, true, true, false, false,
 				PLL_SUMMARIZE_LH, false, false);
 
-#ifdef DEBUG_BRANCHES
 		cout << _pllTree->tree_string << endl;
 		for (int i = 0; i < _missingBranches->size(); i++) {
 			cout << "PARTITION " << i << "/" << _missingBranches->size() << endl;

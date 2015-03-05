@@ -120,7 +120,7 @@ void exit_with_usage(char * command) {
 	printf(
 			"  -i, --input      inputFileName       Set the input alignment (mandatory)");
 	printf("\n\n");
-#ifdef TEST_SIM
+#if(TEST_SIM)
 	printf(
 			"  -I, --original   originalFileName    Set the original alignment (for testing purposes)");
 	printf("\n\n");
@@ -166,7 +166,7 @@ int main(int argc, char * argv[]) {
 	partitionList * pllPartitions = 0;
 	pllAlignmentData * pllAlignment = 0;
 	string inputfile, treefile, partitionsfile, outputfile;
-#ifdef TEST_SIM
+#if(TEST_SIM)
 	string originalfile;
 	pllAlignmentData * originalAlignment = 0;
 	bool originalFileDefined = false;
@@ -244,7 +244,7 @@ int main(int argc, char * argv[]) {
 			inputfile = optarg;
 			break;
 		case 'I':
-#ifdef TEST_SIM
+#if(TEST_SIM)
 			originalfile = optarg;
 			originalFileDefined = true;
 			break;
@@ -354,7 +354,7 @@ int main(int argc, char * argv[]) {
 	seqpred::numberOfTaxa = (unsigned int) pllAlignment->sequenceCount;
 	seqpred::sequenceLength = (unsigned int) pllAlignment->sequenceLength;
 
-#ifdef TEST_SIM
+#if(TEST_SIM)
 	if (originalFileDefined && !seqpred::Utils::existsFile(originalfile)) {
 		cerr << "[ERROR] Alignment file (" << originalfile
 				<< ") does not exist." << endl;
@@ -555,6 +555,14 @@ int main(int argc, char * argv[]) {
 	}
 #endif
 
+#if(TEST_SIM)
+	cout << endl << "T(ini, avg)";
+	pllTreeToNewick(pllTree->tree_string, pllTree, pllPartitions,
+					pllTree->start->back, true, true, true, false, false,
+					PLL_SUMMARIZE_LH, false, false);
+	cout << pllTree->tree_string << endl;
+#endif
+
 	/* Predict sequences */
 	cout << "Predicting sequences..." << endl << endl;
 	for (unsigned int rep = 0; rep < numberOfReplicates; rep++) {
@@ -565,10 +573,18 @@ int main(int argc, char * argv[]) {
 		for (unsigned int currentPartition = 0;
 				currentPartition < (unsigned int) pllPartitions->numberOfPartitions;
 				currentPartition++) {
+
 			seqpred::Predictor sequencePredictor(pllTree, pllPartitions,
 					pllAlignment, currentPartition, missingSequences[currentPartition],
 					&missingBranches);
-#ifdef TEST_SIM
+
+#if(TEST_SIM)
+			cout << endl << "T(ini, " << currentPartition << ")";
+			pllTreeToNewick(pllTree->tree_string, pllTree, pllPartitions,
+					pllTree->start->back, true, true, true, false, false,
+					currentPartition, false, false);
+			cout << pllTree->tree_string << endl;
+
 			if (originalFileDefined) {
 				sequencePredictor.predictMissingSequences(originalAlignment);
 				if (sequencePredictor.getMissingPartsCount()) {
@@ -581,10 +597,25 @@ int main(int argc, char * argv[]) {
 			} else {
 				sequencePredictor.predictMissingSequences();
 			}
+
+			cout << endl << "T(end, " << currentPartition << ")";
+			pllTreeToNewick(pllTree->tree_string, pllTree, pllPartitions,
+					pllTree->start->back, true, true, true, false, false,
+					currentPartition, false, false);
+			cout << pllTree->tree_string << endl;
+		}
+
+		cout << endl << "T(end, avg)";
+		pllTreeToNewick(pllTree->tree_string, pllTree, pllPartitions,
+				pllTree->start->back, true, true, true, false, false,
+				PLL_SUMMARIZE_LH, false, false);
+		cout << pllTree->tree_string << endl;
+
 #else
 			sequencePredictor.predictMissingSequences();
-#endif
 		}
+#endif
+
 		currentTime = time(NULL);
 		cout << endl << "Prediction done. It took " << currentTime - startTime << " seconds." << endl << endl;
 
@@ -603,7 +634,7 @@ int main(int argc, char * argv[]) {
 		cout << "Alignment dumped to " << rep_outputfile.str() << endl << endl;
 	}
 
-#ifdef TEST_SIM
+#if(TEST_SIM)
 			if (originalFileDefined) {
 				pllAlignmentDataDestroy(originalAlignment);
 			}

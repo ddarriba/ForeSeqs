@@ -32,6 +32,7 @@
 #include <map>
 
 #define TEST_SIM 0		  /** enable test features */
+#define CFD 0		  	  /** correction for distance */
 
 #define EPSILON 1e-6		  /** epsilon for comparing floating point values */
 
