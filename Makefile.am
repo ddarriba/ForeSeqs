@@ -9,4 +9,4 @@
 # implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 EXTRA_DIST = testdata
-SUBDIRS = src m4 
+SUBDIRS = src m4 man

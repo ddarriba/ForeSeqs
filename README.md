@@ -1,4 +1,4 @@
 ForeSeqs
-=======
+========
 
-Predicting missing sequences for multigene alignments
+Forecasting missing sequences for multigene alignments

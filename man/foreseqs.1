@@ -1,0 +1,108 @@
+.TH ForeSeqs "1" "24 Mar 2015" "User Commands"
+.SH NAME
+ForeSeqs \- Forecasting Missing Sequences on Multigene Datasets
+.SH SYNOPSIS
+.B treechar
+\-i INPUTFILE [\fIOPTION\fR]...
+.SH DESCRIPTION
+.\" Add any additional description here
+.PP
+Estimates branch lengths and predicts missing sequences in multigene datasets.
+.PP
+Mandatory arguments to long options are mandatory for short options too
+
+.TP
+\fB\-b\fR, \fB\-\-branches\fR \fIBRANCH_STEALING_MODE\fR
+Set the mode for stealing the branch lengths (default: a)
+.br
+\fBa\fR (average)       Average of branch lengths in partitions with existing data
+.br
+\fBd\fR (draw)          Draw a branch length from an inferred distribution
+.br
+\fBs\fR (scale)         Compute an average branch-length scaler
+
+.TP
+\fB\-c\fR, \fB\-\-categories\fR \fICATEGORIES_MODE\fR
+Set the mode for selecting the per-site category (default: r)
+.br
+\fBr\fR (random)        Random per-site category for each sequence
+.br
+\fBe\fR (estimate)      Estimated from the existing data
+.br
+\fBa\fR (average)       Average of all categories
+
+.TP
+\fB\-h\fR, \fB\-\-help\-\fR
+Displays this help message
+
+.TP
+\fB\-i\fR, \fB\-\-input\-file\fR \fIINPUT_FILE\fR
+Set the input alignment file (mandatory)
+
+.TP
+\fB\-o\fR, \fB\-\-output\fR \fIOUTPUT_FILE\fR
+Set the output filename (default: [INPUT_FILE].predicted)
+
+.TP
+\fB\-p\fR, \fB\-\-prior\fR \fIPRIOR\fR
+Set the prior used for predicting the sequences (default: s)
+.br
+\fBs\fR (sequences)       Predict from the ancestral most likely sequence
+.br
+\fBm\fR (MAPVs)           Predict from the marginal ancestral probabilities (MAPVs)
+
+.TP
+\fB\-q\fR, \fB\-\-partitions\fR \fIPARTITIONS_FILE\fR
+Set the partitions definition (PLL like)
+.br
+If no partitions file is set, one single partition and DNA data is assumed and branch lengths are taken directly from the input tree.
+
+.TP
+\fB\-r\fR, \fB\-\-replicates\fR \fINUM_REPLICATES\fR
+Produce several replicates of the prediction
+.TP
+\fB\-s\fR, \fB\-\-seed\fR \fISEED\fR
+Set a custom random number generator seed (default: 12345)
+.TP
+\fB\-t\fR, \fB\-\-tree\fR \fITREE_FILE\fR
+Set the input tree in NEWICK format (mandatory)
+.br
+Examples:
+  
+
+.PP
+.SS "Exit status:"
+.TP
+0
+if OK,
+.TP
+1
+some error has occured,
+.SH AUTHOR
+Written by Diego Darriba.
+.SH "EXAMPLES"
+.TP
+Predicting with default parameters
+.br
+   foreseqs -i input_file -t tree_file
+.TP
+Redirecting the output
+.br
+   foreseqs -i input_file -t tree_file -o full-alignment
+.TP
+Building a set of prediction replicates
+.br
+   foreseqs -i input_file -t tree_file -r 100
+
+.SH "REPORTING BUGS"
+Report ForeSeqs bugs to diego.darriba@h-its.org
+.br
+ForeSeqs home page: <http://github.com/ddarriba/ForeSeqs>
+
+.SH COPYRIGHT
+Copyright \(co 2015 Diego Darriba
+.br
+License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>.
+.br
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.

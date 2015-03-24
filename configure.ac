@@ -9,7 +9,7 @@
 # implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 AC_INIT([foreseqs],
-        [1.0],
+        [1.0.1],
         [Diego Darriba diego.darriba@h-its.org])
 AC_CONFIG_AUX_DIR(config)
 AM_CONFIG_HEADER(config.h)
@@ -33,6 +33,7 @@ AC_CONFIG_FILES([
    Makefile
    m4/Makefile
    src/Makefile
+   man/Makefile
 ])
 AM_PROG_CC_C_O
 
