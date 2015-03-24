@@ -5,20 +5,20 @@
  *      Author: Diego Darriba
  *      E-mail: diego.darriba@h-its.org
  *
- *  This file is part of SeqPred.
+ *  This file is part of ForeSeqs.
  *
- *  SeqPred is free software: you can redistribute it and/or modify
+ *  ForeSeqs is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation, either version 3 of the License, or
  *  (at your option) any later version.
  *
- *  SeqPred is distributed in the hope that it will be useful,
+ *  ForeSeqs is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with SeqPred.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with ForeSeqs.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "Utils.h"
@@ -36,7 +36,7 @@
 
 using namespace std;
 
-namespace seqpred {
+namespace foreseqs {
 
 BLMode branchLengthsMode = BL_AVERAGE;
 CatMode categoriesMode = CAT_ESTIMATE;
@@ -278,4 +278,4 @@ void * Utils::allocate(size_t n, size_t el_size) {
 	return mem;
 }
 
-} /* namespace seqpred */
+} /* namespace foreseqs */

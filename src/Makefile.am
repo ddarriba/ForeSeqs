@@ -1,14 +1,14 @@
-bin_PROGRAMS = seqpred
+bin_PROGRAMS = foreseqs
 
-seqpred_SOURCES = \
-	SeqPred.cpp \
+foreseqs_SOURCES = \
+	ForeSeqs.cpp \
 	Predictor.cpp \
 	DnaModel.cpp \
 	ProteinModel.cpp \
 	Model.cpp \
 	Utils.cpp
-seqpred_CFLAGS = -g -O3 -Wall $(SIMD_FLAGS)
-seqpred_CPPFLAGS = -g -O3 -Wall $(SIMD_FLAGS)
-seqpred_LDFLAGS = -g -O3 -Wall
+foreseqs_CFLAGS = -g -O3 -Wall $(SIMD_FLAGS)
+foreseqs_CPPFLAGS = -g -O3 -Wall $(SIMD_FLAGS)
+foreseqs_LDFLAGS = -g -O3 -Wall
 
 pkginclude_HEADERS = Predictor.h DnaModel.h ProteinModel.h Model.h Utils.h

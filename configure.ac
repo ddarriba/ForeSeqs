@@ -8,7 +8,7 @@
 # WITHOUT ANY WARRANTY, to the extent permitted by law; without even the
 # implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
-AC_INIT([seqpred],
+AC_INIT([foreseqs],
         [1.0],
         [Diego Darriba diego.darriba@h-its.org])
 AC_CONFIG_AUX_DIR(config)

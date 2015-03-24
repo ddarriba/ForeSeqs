@@ -5,20 +5,20 @@
  *      Author: Diego Darriba
  *      E-mail: diego.darriba@h-its.org
  *
- *  This file is part of SeqPred.
+ *  This file is part of ForeSeqs.
  *
- *  SeqPred is free software: you can redistribute it and/or modify
+ *  ForeSeqs is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation, either version 3 of the License, or
  *  (at your option) any later version.
  *
- *  SeqPred is distributed in the hope that it will be useful,
+ *  ForeSeqs is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with SeqPred.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with ForeSeqs.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #ifndef UTILS_H_
@@ -44,7 +44,7 @@
 #define EX_IOERR 2		  /** exit due to an input/output error */
 #define EX_MEMORY 3		  /** exit due to a memory allocation error */
 
-namespace seqpred {
+namespace foreseqs {
 
 /** Data Type definition (nucleic or proteic) */
 enum DataType { DT_NUCLEIC, DT_PROTEIC};
@@ -219,6 +219,6 @@ extern unsigned int sequenceLength;		/* Number of sites (aa/bp) */
 extern char ** taxaNames;			/* Name list of taxa */
 extern unsigned int * seqIndexTranslate;	/* Array for translating indexes in PLL instance to PLL alignment */
 
-} /* namespace seqpred */
+} /* namespace foreseqs */
 
 #endif /* UTILS_H_ */

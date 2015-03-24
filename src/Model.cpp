@@ -5,20 +5,20 @@
  *      Author: Diego Darriba
  *      E-mail: diego.darriba@h-its.org
  *
- *  This file is part of SeqPred.
+ *  This file is part of ForeSeqs.
  *
- *  SeqPred is free software: you can redistribute it and/or modify
+ *  ForeSeqs is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation, either version 3 of the License, or
  *  (at your option) any later version.
  *
- *  SeqPred is distributed in the hope that it will be useful,
+ *  ForeSeqs is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with SeqPred.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with ForeSeqs.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "Model.h"
@@ -30,7 +30,7 @@
 
 using namespace std;
 
-namespace seqpred {
+namespace foreseqs {
 
 Model::Model(partitionList * pllPartitions, size_t partitionIndex) :
 		_pllPartitionInfo(pllPartitions->partitionData[partitionIndex]),
@@ -139,4 +139,4 @@ void Model::constructPMatrix(double * matrix, double branchLength, bool cummulat
 	}
 }
 
-} /* namespace seqpred */
+} /* namespace foreseqs */

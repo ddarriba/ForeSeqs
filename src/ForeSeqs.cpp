@@ -1,24 +1,24 @@
 /**
- * SeqPred.cpp
+ * ForeSeqs.cpp
  *
  *  Created on: Oct 2, 2014
  *      Author: Diego Darriba
  *      E-mail: diego.darriba@h-its.org
  *
- *  This file is part of SeqPred.
+ *  This file is part of ForeSeqs.
  *
- *  SeqPred is free software: you can redistribute it and/or modify
+ *  ForeSeqs is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation, either version 3 of the License, or
  *  (at your option) any later version.
  *
- *  SeqPred is distributed in the hope that it will be useful,
+ *  ForeSeqs is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with SeqPred.  If not, see <http://www.gnu.org/licenses/>.
+ *  along with ForeSeqs.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "Predictor.h"
@@ -201,13 +201,13 @@ int main(int argc, char * argv[]) {
 					char branchMode = optarg[0];
 					switch(branchMode) {
 					case 'a':
-						seqpred::branchLengthsMode = seqpred::BL_AVERAGE;
+						foreseqs::branchLengthsMode = foreseqs::BL_AVERAGE;
 						break;
 					case 'd':
-						seqpred::branchLengthsMode = seqpred::BL_DRAW;
+						foreseqs::branchLengthsMode = foreseqs::BL_DRAW;
 						break;
 					case 's':
-						seqpred::branchLengthsMode = seqpred::BL_SCALE;
+						foreseqs::branchLengthsMode = foreseqs::BL_SCALE;
 						break;
 					default:
 						cerr << "[ERROR] Invalid branch length stealing mode: " << optarg << endl;
@@ -224,13 +224,13 @@ int main(int argc, char * argv[]) {
 			char catMode = optarg[0];
 			switch(catMode) {
 			case 'r':
-				seqpred::categoriesMode = seqpred::CAT_RANDOM;
+				foreseqs::categoriesMode = foreseqs::CAT_RANDOM;
 				break;
 			case 'e':
-				seqpred::categoriesMode = seqpred::CAT_ESTIMATE;
+				foreseqs::categoriesMode = foreseqs::CAT_ESTIMATE;
 				break;
 			case 'a':
-				seqpred::categoriesMode = seqpred::CAT_AVERAGE;
+				foreseqs::categoriesMode = foreseqs::CAT_AVERAGE;
 				break;
 			default:
 				cerr << "[ERROR] Invalid categories mode: " << optarg << endl;
@@ -271,10 +271,10 @@ int main(int argc, char * argv[]) {
 			char predMode = optarg[0];
 			switch (predMode) {
 			case 's':
-				seqpred::predictionMode = seqpred::PRED_ANCSEQ;
+				foreseqs::predictionMode = foreseqs::PRED_ANCSEQ;
 				break;
 			case 'm':
-				seqpred::predictionMode = seqpred::PRED_MAP;
+				foreseqs::predictionMode = foreseqs::PRED_MAP;
 				break;
 			default:
 				cerr << "[ERROR] Invalid prediction mode: " << optarg << endl;
@@ -324,19 +324,19 @@ int main(int argc, char * argv[]) {
 		pllTree->perGeneBranchLengths = PLL_TRUE;
 	}
 
-	if (!seqpred::Utils::existsFile(inputfile)) {
+	if (!foreseqs::Utils::existsFile(inputfile)) {
 		cerr << "[ERROR] Input alignment (" << inputfile << ") does not exist."
 				<< endl;
 		exit(EX_IOERR);
 	}
 
-	if (!seqpred::Utils::existsFile(treefile)) {
+	if (!foreseqs::Utils::existsFile(treefile)) {
 		cerr << "[ERROR] Tree file (" << treefile << ") does not exist."
 				<< endl;
 		exit(EX_IOERR);
 	}
 
-	if (partitionsFileDefined && !seqpred::Utils::existsFile(partitionsfile)) {
+	if (partitionsFileDefined && !foreseqs::Utils::existsFile(partitionsfile)) {
 		cerr << "[ERROR] Partitions file (" << partitionsfile
 				<< ") does not exist." << endl;
 		exit(EX_IOERR);
@@ -351,11 +351,11 @@ int main(int argc, char * argv[]) {
 		cerr << "[ERROR] There was an error parsing input data." << endl;
 		exit(EX_IOERR);
 	}
-	seqpred::numberOfTaxa = (unsigned int) pllAlignment->sequenceCount;
-	seqpred::sequenceLength = (unsigned int) pllAlignment->sequenceLength;
+	foreseqs::numberOfTaxa = (unsigned int) pllAlignment->sequenceCount;
+	foreseqs::sequenceLength = (unsigned int) pllAlignment->sequenceLength;
 
 #if(TEST_SIM)
-	if (originalFileDefined && !seqpred::Utils::existsFile(originalfile)) {
+	if (originalFileDefined && !foreseqs::Utils::existsFile(originalfile)) {
 		cerr << "[ERROR] Alignment file (" << originalfile
 				<< ") does not exist." << endl;
 		exit(EX_IOERR);
@@ -370,20 +370,20 @@ int main(int argc, char * argv[]) {
 					<< endl;
 			exit(EX_IOERR);
 		}
-		if (seqpred::numberOfTaxa
+		if (foreseqs::numberOfTaxa
 				!= (unsigned int) originalAlignment->sequenceCount) {
 			cerr << "[ERROR] Number of taxa in the original alignment ("
 					<< originalAlignment->sequenceCount
 					<< ") does not match the input file ("
-					<< seqpred::numberOfTaxa << ")." << endl;
+					<< foreseqs::numberOfTaxa << ")." << endl;
 			exit(EX_IOERR);
 		}
-		if (seqpred::sequenceLength
+		if (foreseqs::sequenceLength
 				!= (unsigned int) originalAlignment->sequenceLength) {
 			cerr << "[ERROR] Sequence length in the original alignment ("
 					<< originalAlignment->sequenceLength
 					<< ") does not match the input file ("
-					<< seqpred::sequenceLength << ")." << endl;
+					<< foreseqs::sequenceLength << ")." << endl;
 			exit(EX_IOERR);
 		}
 	}
@@ -429,38 +429,38 @@ int main(int argc, char * argv[]) {
 	cout << setw(20) << left << "Input tree:" << treefile << endl;
 	cout << setw(20) << left << "Partitions file:" << ((partitionsfile.length() > 0)?partitionsfile:"-") << endl;
 	cout << setw(20) << left << "Output file:" << outputfile << endl;
-	cout << setw(20) << left << "Num.Taxa:" << seqpred::numberOfTaxa << endl;
-	cout << setw(20) << left << "Seq.Length:" << seqpred::sequenceLength << endl;
+	cout << setw(20) << left << "Num.Taxa:" << foreseqs::numberOfTaxa << endl;
+	cout << setw(20) << left << "Seq.Length:" << foreseqs::sequenceLength << endl;
 	cout << setw(20) << left << "Branch lengths:";
-	switch (seqpred::branchLengthsMode) {
-	case seqpred::BL_AVERAGE:
+	switch (foreseqs::branchLengthsMode) {
+	case foreseqs::BL_AVERAGE:
 		cout << "Average" << endl;
 		break;
-	case seqpred::BL_DRAW:
+	case foreseqs::BL_DRAW:
 		cout << "Drawn" << endl;
 		break;
-	case seqpred::BL_SCALE:
+	case foreseqs::BL_SCALE:
 		cout << "Average scaler" << endl;
 		break;
 	}
 	cout << setw(20) << left << "Prediction mode:";
-	switch (seqpred::predictionMode) {
-	case seqpred::PRED_ANCSEQ:
+	switch (foreseqs::predictionMode) {
+	case foreseqs::PRED_ANCSEQ:
 		cout << "Ancestral sequences" << endl;
 		break;
-	case seqpred::PRED_MAP:
+	case foreseqs::PRED_MAP:
 		cout << "Marginal ancestral probabilities" << endl;
 		break;
 	}
 	cout << setw(20) << left << "Gamma rates:";
-	switch(seqpred::categoriesMode) {
-	case seqpred::CAT_RANDOM:
+	switch(foreseqs::categoriesMode) {
+	case foreseqs::CAT_RANDOM:
 		cout<< "Random" << endl;
 		break;
-	case seqpred::CAT_AVERAGE:
+	case foreseqs::CAT_AVERAGE:
 			cout<< "Average" << endl;
 			break;
-	case seqpred::CAT_ESTIMATE:
+	case foreseqs::CAT_ESTIMATE:
 			cout<< "Estimated" << endl;
 			break;
 	}
@@ -504,14 +504,14 @@ int main(int argc, char * argv[]) {
 		cerr << "Error!" << endl;
 		exit(1);
 	}
-	seqpred::taxaNames = pllTree->nameList;
+	foreseqs::taxaNames = pllTree->nameList;
 
 	/* build translation array */
-	seqpred::seqIndexTranslate = (unsigned int *) malloc ((seqpred::numberOfTaxa+1)*sizeof(unsigned int));
-	for (unsigned int i=1; i<=seqpred::numberOfTaxa; i++) {
-		for (unsigned int j=1; j<=seqpred::numberOfTaxa; j++) {
+	foreseqs::seqIndexTranslate = (unsigned int *) malloc ((foreseqs::numberOfTaxa+1)*sizeof(unsigned int));
+	for (unsigned int i=1; i<=foreseqs::numberOfTaxa; i++) {
+		for (unsigned int j=1; j<=foreseqs::numberOfTaxa; j++) {
 			if (!strcmp(pllAlignment->sequenceLabels[j], pllTree->tipNames[i])) {
-				seqpred::seqIndexTranslate[i] = j;
+				foreseqs::seqIndexTranslate[i] = j;
 			}
 		}
 	}
@@ -540,8 +540,8 @@ int main(int argc, char * argv[]) {
 	cout << "Initiial inference done. It took " << currentTime - startTime << " seconds." << endl << endl;
 
 	/* Find missing sequences and branches */
-	vector<vector<unsigned int> > missingSequences =  seqpred::Utils::findMissingSequences(pllTree, pllPartitions);
-	vector<vector<nodeptr> > missingBranches = seqpred::Utils::findMissingBranches(pllTree, pllPartitions, missingSequences);
+	vector<vector<unsigned int> > missingSequences =  foreseqs::Utils::findMissingSequences(pllTree, pllPartitions);
+	vector<vector<nodeptr> > missingBranches = foreseqs::Utils::findMissingBranches(pllTree, pllPartitions, missingSequences);
 
 #ifdef PRINT_TRACE
 	pllTreeToNewick(pllTree->tree_string, pllTree, pllPartitions,
@@ -576,7 +576,7 @@ int main(int argc, char * argv[]) {
 				currentPartition < (unsigned int) pllPartitions->numberOfPartitions;
 				currentPartition++) {
 
-			seqpred::Predictor sequencePredictor(pllTree, pllPartitions,
+			foreseqs::Predictor sequencePredictor(pllTree, pllPartitions,
 					pllAlignment, currentPartition, missingSequences[currentPartition],
 					&missingBranches);
 
@@ -642,7 +642,7 @@ int main(int argc, char * argv[]) {
 			}
 #endif
 
-	free(seqpred::seqIndexTranslate);
+	free(foreseqs::seqIndexTranslate);
 	pllAlignmentDataDestroy(pllAlignment);
 	pllPartitionsDestroy(pllTree, &pllPartitions);
 	pllDestroyInstance(pllTree);
