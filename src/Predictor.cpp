@@ -42,7 +42,7 @@
 
 using namespace std;
 
-#define MIN_BR_LEN 0.0001
+#define MIN_BR_LEN 0.00001
 
 namespace seqpred {
 
@@ -312,7 +312,7 @@ void printBranchLengths(pllInstance * _pllTree, partitionList * _pllPartitions) 
 	for (int i=0; i<_pllPartitions->numberOfPartitions; i++) {
 		cout << i << " -> ";
 		for (int node=1; node <= 2*_pllTree->mxtips-3; node++) {
-			cout << " " << pllGetBranchLength(_pllTree, _pllTree->nodep[node], i);
+			cout << " " << pllGetBranchLength(_pllTree, _pllPartitions, _pllTree->nodep[node], i);
 		}
 		cout << endl;
 	}
@@ -356,14 +356,14 @@ double Predictor::computeBranchLength(const nodeptr node) const {
 			if (!isMissingBranch(node, i)) {
 				double factor = (double) _pllPartitions->partitionData[i]->width / (double) sumwgt;
 				sumFactors += factor;
-				double currentBL = pllGetBranchLength(_pllTree, node, (int) i) * factor;
+				double currentBL = pllGetBranchLength(_pllTree, _pllPartitions, node, (int) i) * factor;
 				branchLength += currentBL;
 			}
 		}
 		assert(Utils::floatEquals(sumFactors, 1.0));
 	} else {
 		/* return the current and only branch length */
-		branchLength = pllGetBranchLength(_pllTree, node, (int)_partitionNumber);
+		branchLength = pllGetBranchLength(_pllTree, _pllPartitions, node, (int)_partitionNumber);
 	}
 
 	switch (branchLengthsMode) {
@@ -441,7 +441,7 @@ void Predictor::getBranches(nodeptr node, int depth, double * cumWeight, vector<
 			/* add to scaler only if there is info in other partitions */
 			if (sumWgt > 0) {
 
-				double branchLength = pllGetBranchLength(_pllTree, node, (int)_partitionNumber);
+				double branchLength = pllGetBranchLength(_pllTree, _pllPartitions, node, (int)_partitionNumber);
 
 				/* compute the current weighted branch length ratio */
 				double sumFactors = 0.0;
@@ -449,7 +449,7 @@ void Predictor::getBranches(nodeptr node, int depth, double * cumWeight, vector<
 						i < (unsigned int) _pllPartitions->numberOfPartitions;
 						i++) {
 					if (_partitionNumber != i && !isMissingBranch(node, i)) {
-						double curBranchLength = pllGetBranchLength(_pllTree, node, (int)i);
+						double curBranchLength = pllGetBranchLength(_pllTree, _pllPartitions, node, (int)i);
 						double factor =
 								(double) _pllPartitions->partitionData[i]->width
 										/ (double) sumWgt;
@@ -520,7 +520,7 @@ double Predictor::getSumBranches(nodeptr node, int depth, double * weight) const
 			/* add to scaler only if there is info in other partitions */
 			if (sumWgt > 0) {
 
-				double branchLength = pllGetBranchLength(_pllTree, node,
+				double branchLength = pllGetBranchLength(_pllTree, _pllPartitions, node,
 						(int) _partitionNumber);
 
 				/* compute the current weighted branch length ratio */
@@ -531,7 +531,7 @@ double Predictor::getSumBranches(nodeptr node, int depth, double * weight) const
 
 					if (_partitionNumber != i && !isMissingBranch(node, i)) {
 
-						double curBranchLength = pllGetBranchLength(_pllTree, node, (int)i);
+						double curBranchLength = pllGetBranchLength(_pllTree, _pllPartitions, node, (int)i);
 						double factor =
 								(double) _pllPartitions->partitionData[i]->width
 										/ (double) sumWgt;

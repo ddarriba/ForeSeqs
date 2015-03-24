@@ -429,6 +429,8 @@ int main(int argc, char * argv[]) {
 	cout << setw(20) << left << "Input tree:" << treefile << endl;
 	cout << setw(20) << left << "Partitions file:" << ((partitionsfile.length() > 0)?partitionsfile:"-") << endl;
 	cout << setw(20) << left << "Output file:" << outputfile << endl;
+	cout << setw(20) << left << "Num.Taxa:" << seqpred::numberOfTaxa << endl;
+	cout << setw(20) << left << "Seq.Length:" << seqpred::sequenceLength << endl;
 	cout << setw(20) << left << "Branch lengths:";
 	switch (seqpred::branchLengthsMode) {
 	case seqpred::BL_AVERAGE:
@@ -556,7 +558,7 @@ int main(int argc, char * argv[]) {
 #endif
 
 #if(TEST_SIM)
-	cout << endl << "T(ini, avg)";
+	cout << endl << "T(ini,avg): ";
 	pllTreeToNewick(pllTree->tree_string, pllTree, pllPartitions,
 					pllTree->start->back, true, true, true, false, false,
 					PLL_SUMMARIZE_LH, false, false);
@@ -579,7 +581,7 @@ int main(int argc, char * argv[]) {
 					&missingBranches);
 
 #if(TEST_SIM)
-			cout << endl << "T(ini, " << currentPartition << ")";
+			cout << endl << "T(ini," << currentPartition << "): ";
 			pllTreeToNewick(pllTree->tree_string, pllTree, pllPartitions,
 					pllTree->start->back, true, true, true, false, false,
 					currentPartition, false, false);
@@ -598,14 +600,14 @@ int main(int argc, char * argv[]) {
 				sequencePredictor.predictMissingSequences();
 			}
 
-			cout << endl << "T(end, " << currentPartition << ")";
+			cout << endl << "T(end," << currentPartition << "): ";
 			pllTreeToNewick(pllTree->tree_string, pllTree, pllPartitions,
 					pllTree->start->back, true, true, true, false, false,
 					currentPartition, false, false);
 			cout << pllTree->tree_string << endl;
 		}
 
-		cout << endl << "T(end, avg)";
+		cout << endl << "T(end,avg): ";
 		pllTreeToNewick(pllTree->tree_string, pllTree, pllPartitions,
 				pllTree->start->back, true, true, true, false, false,
 				PLL_SUMMARIZE_LH, false, false);
