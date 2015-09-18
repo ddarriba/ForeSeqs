@@ -278,4 +278,60 @@ void * Utils::allocate(size_t n, size_t el_size) {
 	return mem;
 }
 
+void Utils::optimizeModelParameters(pllInstance * pllTree,
+		partitionList * pllPartitions) {
+	double lk = 0.0;
+	double epsilon = 0.01;
+	bool optimizeBranchLengths = pllPartitions->numberOfPartitions > 1;
+
+	if (optimizeBranchLengths) {
+		/*
+		 * Optimize per-gene branch lengths.
+		 */
+		cout << "Optimizing per-gene branch lengths / model parameters " << endl;
+
+		int smoothIterations = 64;
+		do {
+			lk = pllTree->likelihood;
+			pllOptimizeBranchLengths(pllTree, pllPartitions, smoothIterations);
+			pllOptimizeModelParameters(pllTree, pllPartitions, 0.1);
+		} while (fabs(lk - pllTree->likelihood) > epsilon);
+	} else {
+		/*
+		 * In case there is one single partition, we do not optimize the branch lengths.
+		 * Otherwise we would have weird results in the branches with missing data.
+		 */
+		cout << "Optimizing model parameters " << endl;
+
+		pllOptRatesGeneric(pllTree, pllPartitions, 1.0,
+				pllPartitions->rateList);
+		pllEvaluateLikelihood(pllTree, pllPartitions, pllTree->start, true,
+				false);
+		pllOptBaseFreqs(pllTree, pllPartitions, 1.0, pllPartitions->freqList);
+		pllEvaluateLikelihood(pllTree, pllPartitions, pllTree->start, true,
+				false);
+		pllOptAlphasGeneric(pllTree, pllPartitions, 1.0,
+				pllPartitions->alphaList);
+		pllEvaluateLikelihood(pllTree, pllPartitions, pllTree->start, true,
+				false);
+		do {
+			lk = pllTree->likelihood;
+			pllEvaluateLikelihood(pllTree, pllPartitions, pllTree->start, true,
+					false);
+			pllOptRatesGeneric(pllTree, pllPartitions, 0.1,
+					pllPartitions->rateList);
+			pllEvaluateLikelihood(pllTree, pllPartitions, pllTree->start, true,
+					false);
+			pllOptBaseFreqs(pllTree, pllPartitions, 0.1,
+					pllPartitions->freqList);
+			pllEvaluateLikelihood(pllTree, pllPartitions, pllTree->start, true,
+					false);
+			pllOptAlphasGeneric(pllTree, pllPartitions, 0.1,
+					pllPartitions->alphaList);
+			pllEvaluateLikelihood(pllTree, pllPartitions, pllTree->start, true,
+					false);
+		} while (fabs(lk - pllTree->likelihood) > epsilon);
+	}
+}
+
 } /* namespace foreseqs */

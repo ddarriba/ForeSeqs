@@ -178,6 +178,14 @@ public:
 		partitionList * pllPartitions, std::vector< std::vector<unsigned int> > missingSequences );
 
 	/**
+	 * @brief Optimizes the model parameters
+	 *
+	 * @param[in,out] pllTree The tree
+	 * @param[in,out] pllPartitions The partitions
+	 */
+	static void optimizeModelParameters(pllInstance * pllTree, partitionList * pllPartitions);
+
+	/**
 	 * @brief Allocate memory
 	 * @param n number of elements to allocate
 	 * @param el_size per-element size
@@ -208,6 +216,7 @@ private:
 	 * @param size The size of the matrix
 	 */
 	static void transpose(double * m, size_t size);
+
 };
 
 extern BLMode branchLengthsMode;		/** Mode for stealing the branch lengths */

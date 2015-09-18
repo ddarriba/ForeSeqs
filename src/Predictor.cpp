@@ -240,7 +240,11 @@ void Predictor::mutateSequence(char * currentSequence,
 	for (unsigned int i = 0; i < numberOfRateCategories; i++) {
 		_currentModel->setMatrix(matrix[i], gammaRates[i] * branchLength);
 		for (unsigned int j = 0; j < _numberOfStates; j++) {
-			assert(Utils::floatEquals(matrix[i][j*_numberOfStates + _numberOfStates - 1], 1.0));
+      if (!Utils::floatEquals(matrix[i][j*_numberOfStates + _numberOfStates - 1], 1.0))
+      {
+        cerr << "ERROR: Pmatrix sums to " << matrix[i][j*_numberOfStates + _numberOfStates - 1] << " instead of 1.0" << endl;
+        assert(0);
+      }
 		}
 	}
 
