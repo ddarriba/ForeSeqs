@@ -238,13 +238,19 @@ void Predictor::mutateSequence(char * currentSequence,
 	}
 
 	for (unsigned int i = 0; i < numberOfRateCategories; i++) {
-		_currentModel->setMatrix(matrix[i], gammaRates[i] * branchLength);
+		/* compute cummulative P matrix */
+		_currentModel->setMatrix(matrix[i], gammaRates[i] * branchLength, true);
+
+		/* verify that last per-row value is 1.0 */
 		for (unsigned int j = 0; j < _numberOfStates; j++) {
-      if (!Utils::floatEquals(matrix[i][j*_numberOfStates + _numberOfStates - 1], 1.0))
-      {
-        cerr << "ERROR: Pmatrix sums to " << matrix[i][j*_numberOfStates + _numberOfStates - 1] << " instead of 1.0" << endl;
-        assert(0);
-      }
+			if (!Utils::floatEquals(
+					matrix[i][j * _numberOfStates + _numberOfStates - 1],
+					1.0)) {
+				cerr << "ERROR: Pmatrix " << i << " sums to "
+						<< matrix[i][j * _numberOfStates + _numberOfStates - 1]
+						<< " instead of 1.0" << endl;
+				assert(0);
+			}
 		}
 	}
 

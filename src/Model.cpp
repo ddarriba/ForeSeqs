@@ -91,32 +91,36 @@ void Model::constructPMatrix(double * matrix, double branchLength, bool cummulat
 	size_t squaredNumStates = numStates * numStates;
 
 	P = matrix;
-	if (branchLength < 1e-6) {
+
+	if (branchLength < MIN_BRANCH_LEN) {
+		/* account for near zero branch lengths */
 		for (size_t i = 0; i < numStates; i++) {
 			for (size_t j = 0; j < numStates; j++) {
-				if (i == j)
-					*P = 1.0;
+				if (cummulative)
+					*P = (i<=j)?1.0:0.0;
 				else
-					*P = 0.0;
+					*P = (i==j)?1.0:0.0;
 				P++;
 			}
 		}
 		return;
 	}
-
-	for (size_t k = 1; k < numStates; k++) {
-		expt[k] = exp(branchLength * eigenValues[k]);
-	}
-	for (size_t i = 0; i < numStates; i++) {
-		for (size_t j = 0; j < numStates; j++) {
-			(*P) = Cijk[i * squaredNumStates + j * numStates + 0];
-			for (size_t k = 1; k < numStates; k++) {
-				(*P) += Cijk[i * squaredNumStates + j * numStates + k] * expt[k];
+	else
+	{
+		for (size_t k = 1; k < numStates; k++) {
+			expt[k] = exp(branchLength * eigenValues[k]);
+		}
+		for (size_t i = 0; i < numStates; i++) {
+			for (size_t j = 0; j < numStates; j++) {
+				(*P) = Cijk[i * squaredNumStates + j * numStates + 0];
+				for (size_t k = 1; k < numStates; k++) {
+					(*P) += Cijk[i * squaredNumStates + j * numStates + k]
+							* expt[k];
+				}
+				P++;
 			}
-			P++;
 		}
 	}
-
 	if (cummulative) {
 		/* the rows are cumulative to help with picking one using
 		 a random number */

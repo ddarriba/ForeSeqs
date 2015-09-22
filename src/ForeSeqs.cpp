@@ -93,6 +93,9 @@ void exit_with_usage(char * command) {
 	printf(
 			"  -t, --tree       treeFileName        Set the input tree (mandatory)");
 	printf("\n\n");
+	printf(
+			"  -T, --threads    numberOfThreads     Set the number of threads (default: 1)");
+	printf("\n\n");
 	printf("Examples:\n");
 	printf("  %s -i input_file -t tree_file", command);
 	printf("\n\n");
@@ -110,6 +113,7 @@ int main(int argc, char * argv[]) {
 	partitionList * pllPartitions = 0;
 	pllAlignmentData * pllAlignment = 0;
 	string inputfile, treefile, partitionsfile, outputfile;
+	foreseqs::numberOfThreads = 1;
 #if(TEST_SIM)
 	string originalfile;
 	pllAlignmentData * originalAlignment = 0;
@@ -130,10 +134,11 @@ int main(int argc, char * argv[]) {
 			{ "replicates", required_argument, 0, 'r' },
 			{ "seed", required_argument, 0, 's' },
 			{ "output", required_argument, 0, 'o' },
+			{ "threads", required_argument, 0, 'T' },
 			{ 0, 0, 0, 0 } };
 
 	int opt = 0, long_index = 0;
-	while ((opt = getopt_long(argc, argv, "b:c:hi:I:t:q:r:s:o:p:", long_options,
+	while ((opt = getopt_long(argc, argv, "b:c:hi:I:t:q:r:s:o:p:T:", long_options,
 			&long_index)) != -1) {
 		switch (opt) {
 		case 'b':
@@ -232,6 +237,9 @@ int main(int argc, char * argv[]) {
 		case 's':
 			randomNumberSeed = (unsigned int) atoi(optarg);
 			break;
+		case 'T':
+			foreseqs::numberOfThreads = (unsigned int) atoi(optarg);
+			break;
 		default:
 			exit(EX_IOERR);
 		}
@@ -263,7 +271,7 @@ int main(int argc, char * argv[]) {
 		pllInstanceAttr.rateHetModel = PLL_GAMMA;
 		pllInstanceAttr.saveMemory = PLL_FALSE;
 		pllInstanceAttr.useRecom = PLL_FALSE;
-		pllInstanceAttr.numberOfThreads = 1;
+		pllInstanceAttr.numberOfThreads = foreseqs::numberOfThreads;
 		pllTree = pllCreateInstance(&pllInstanceAttr);
 	}
 
@@ -410,6 +418,9 @@ int main(int argc, char * argv[]) {
 	cout << setw(20) << left << "Random seed:" << randomNumberSeed << endl;
 	cout << setw(20) << left << "#Replicates:" << numberOfReplicates << endl;
 	cout << setfill('-') << setw(60) << "" << setfill(' ') << endl;
+	cout << "ForeSeqs was called as follows:" << endl << "  ";
+	for (int i=1; i<argc; i++) cout << argv[i] << " ";
+	cout << endl;
 
 	/* Check partitions / Warn if needed */
 

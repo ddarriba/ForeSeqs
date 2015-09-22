@@ -29,6 +29,8 @@
 #include <map>
 #include <vector>
 
+#define MIN_BRANCH_LEN 1e-6
+
 namespace foreseqs {
 
 class Model {

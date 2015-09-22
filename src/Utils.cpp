@@ -29,6 +29,7 @@
 #include <cstring>
 #include <cassert>
 #include <cmath>
+#include <ctime>
 
 #ifdef __SSE3__
 #include <x86intrin.h>
@@ -45,6 +46,7 @@ PredMode predictionMode = PRED_ANCSEQ;
 /* Number of categories hardcoded to 4 */
 unsigned int numberOfRateCategories = 4;
 unsigned int numberOfTaxa, sequenceLength;
+unsigned int numberOfThreads = 1;
 char ** taxaNames;
 unsigned int * seqIndexTranslate;
 

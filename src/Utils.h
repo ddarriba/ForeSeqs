@@ -31,7 +31,7 @@
 #include <cstdio>
 #include <map>
 
-#define TEST_SIM 0		  /** enable test features */
+#define TEST_SIM 1    /** enable test features */
 #define CFD 0		  	  /** correction for distance */
 
 #define EPSILON 1e-6		  /** epsilon for comparing floating point values */
@@ -224,6 +224,7 @@ extern CatMode categoriesMode;			/** Mode for selecting per-site rate categories
 extern PredMode predictionMode;			/** Prior for predicting the sequences */
 extern unsigned int numberOfRateCategories;	/** Number of gamma rate categories */
 extern unsigned int numberOfTaxa;		/* Number of taxa */
+extern unsigned int numberOfThreads;	/* Number of threads */
 extern unsigned int sequenceLength;		/* Number of sites (aa/bp) */
 extern char ** taxaNames;			/* Name list of taxa */
 extern unsigned int * seqIndexTranslate;	/* Array for translating indexes in PLL instance to PLL alignment */

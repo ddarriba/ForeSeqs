@@ -46,11 +46,16 @@ AC_CHECK_LIB([m], [main], [], [
 #   AC_MSG_ERROR([Could  not find OPENBLAS library])
 # ])
 
-# AC_CHECK_LIB([pthread], [pthread_create])
-# AC_CHECK_LIB([pll-sse3-pthreads], [pllCreateInstance])
-AC_CHECK_LIB([pll-avx], [pllCreateInstance], [], [
-  AC_CHECK_LIB([pll-sse3], [pllCreateInstance], [], [
-    AC_MSG_ERROR([Could  not find PLL library])
+#AC_CHECK_LIB([pthread], [pthread_create], [
+#    AC_CHECK_LIB([pll-avx-pthreads], [pllCreateInstance], [], [
+#        AC_CHECK_LIB([pll-sse3-pthreads], [pllCreateInstance], [] [
+#            AC_MSG_ERROR([Could  not find PLL library])
+#              ])])
+#], [
+    AC_CHECK_LIB([pll-avx], [pllCreateInstance], [], [
+        AC_CHECK_LIB([pll-sse3], [pllCreateInstance], [], [
+            AC_MSG_ERROR([Could  not find PLL library])
 ])])
+#])
 
 AC_OUTPUT
