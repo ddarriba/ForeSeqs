@@ -9,7 +9,7 @@
 # implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 AC_INIT([foreseqs],
-        [1.0.1],
+        [1.0.2],
         [Diego Darriba diego.darriba@h-its.org])
 AC_CONFIG_AUX_DIR(config)
 AM_CONFIG_HEADER(config.h)
@@ -52,10 +52,11 @@ AC_CHECK_LIB([m], [main], [], [
 #            AC_MSG_ERROR([Could  not find PLL library])
 #              ])])
 #], [
-    AC_CHECK_LIB([pll-avx], [pllCreateInstance], [], [
+#    AC_CHECK_LIB([pll-avx], [pllCreateInstance], [], [
         AC_CHECK_LIB([pll-sse3], [pllCreateInstance], [], [
             AC_MSG_ERROR([Could  not find PLL library])
-])])
+])
+#])
 #])
 
 AC_OUTPUT
