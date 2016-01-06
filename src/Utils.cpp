@@ -50,6 +50,8 @@ unsigned int numberOfThreads = 1;
 char ** taxaNames;
 unsigned int * seqIndexTranslate;
 
+bool predictSequences = true;
+
 double Utils::genRand(void) {
 	return rand() * (1.0 / INT_MAX);
 }

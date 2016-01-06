@@ -152,6 +152,13 @@ private:
 			double * ancestralPMatrix, double branchLength);
 
 	/**
+	 * @brief Steals branch lengths recursively
+	 *
+	 * @param node The root node of the missing subtree
+	 */
+	void stealBranchRecursive(const nodeptr node);
+
+	/**
 	 * @brief Predict the sequences for a whole subtree starting from an ancestral sequence
 	 *
 	 * @param node The node to evolve

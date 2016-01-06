@@ -31,7 +31,7 @@
 #include <cstdio>
 #include <map>
 
-#define TEST_SIM 1    /** enable test features */
+#define TEST_SIM 0        /** enable testing features */
 #define CFD 0		  	  /** correction for distance */
 
 #define EPSILON 1e-6		  /** epsilon for comparing floating point values */
@@ -65,8 +65,9 @@ enum BLMode {
 
 /** Mode for predicting the sequences */
 enum PredMode {
-	PRED_ANCSEQ,	/** Predict from ancestral sequences */
-	PRED_MAP	/** Predict from Marginal Ancestral Probabilities */
+	PRED_ANCSEQ,    /** Predict from ancestral sequences */
+	PRED_MAP,	    /** Predict from Marginal Ancestral Probabilities */
+	PRED_NONE       /** Skip prediction */
 };
 
 class Utils {
@@ -228,6 +229,7 @@ extern unsigned int numberOfThreads;	/* Number of threads */
 extern unsigned int sequenceLength;		/* Number of sites (aa/bp) */
 extern char ** taxaNames;			/* Name list of taxa */
 extern unsigned int * seqIndexTranslate;	/* Array for translating indexes in PLL instance to PLL alignment */
+extern bool predictSequences;           /* Flag for trigger the sequence prediction */
 
 } /* namespace foreseqs */
 

@@ -96,11 +96,16 @@ void exit_with_usage(char * command) {
 	printf(
 			"  -T, --threads    numberOfThreads     Set the number of threads (default: 1)");
 	printf("\n\n");
+	printf(
+			"  -u, --skip-prediction                Skips sequence prediction (prints tree with stolen branches)");
+		printf("\n\n");
 	printf("Examples:\n");
 	printf("  %s -i input_file -t tree_file", command);
 	printf("\n\n");
 	exit(EXIT_SUCCESS);
 }
+
+#define DEFAULT_RANDOM_SEED 12345
 
 int main(int argc, char * argv[]) {
 
@@ -119,7 +124,7 @@ int main(int argc, char * argv[]) {
 	pllAlignmentData * originalAlignment = 0;
 	bool originalFileDefined = false;
 #endif
-	unsigned int randomNumberSeed = 12345;
+	unsigned int randomNumberSeed = DEFAULT_RANDOM_SEED;
 	unsigned int numberOfReplicates = 1;
 
 	static struct option long_options[] = {
@@ -135,10 +140,11 @@ int main(int argc, char * argv[]) {
 			{ "seed", required_argument, 0, 's' },
 			{ "output", required_argument, 0, 'o' },
 			{ "threads", required_argument, 0, 'T' },
+			{ "skip-prediction", required_argument, 0, 'u' },
 			{ 0, 0, 0, 0 } };
 
 	int opt = 0, long_index = 0;
-	while ((opt = getopt_long(argc, argv, "b:c:hi:I:t:q:r:s:o:p:T:", long_options,
+	while ((opt = getopt_long(argc, argv, "b:c:hi:I:t:q:r:s:o:p:T:u", long_options,
 			&long_index)) != -1) {
 		switch (opt) {
 		case 'b':
@@ -240,6 +246,10 @@ int main(int argc, char * argv[]) {
 		case 'T':
 			foreseqs::numberOfThreads = (unsigned int) atoi(optarg);
 			break;
+		case 'u':
+			foreseqs::predictSequences = false;
+			foreseqs::predictionMode = foreseqs::PRED_NONE;
+			break;
 		default:
 			exit(EX_IOERR);
 		}
@@ -304,6 +314,18 @@ int main(int argc, char * argv[]) {
 	}
 	foreseqs::numberOfTaxa = (unsigned int) pllAlignment->sequenceCount;
 	foreseqs::sequenceLength = (unsigned int) pllAlignment->sequenceLength;
+
+	if (!foreseqs::predictSequences) {
+		if (numberOfReplicates != 1) {
+			cerr << "WARNING: Number of replicates was reset to 1." << endl;
+			numberOfReplicates = 1;
+		}
+		if (foreseqs::predictionMode != foreseqs::PRED_NONE)
+		{
+			cerr << "WARNING: Ignored prediction algorithm." << endl;
+			foreseqs::predictionMode = foreseqs::PRED_NONE;
+		}
+	}
 
 #if(TEST_SIM)
 	if (originalFileDefined && !foreseqs::Utils::existsFile(originalfile)) {
@@ -402,6 +424,9 @@ int main(int argc, char * argv[]) {
 	case foreseqs::PRED_MAP:
 		cout << "Marginal ancestral probabilities" << endl;
 		break;
+	case foreseqs::PRED_NONE:
+		cout << "No prediction" << endl;
+		break;
 	}
 	cout << setw(20) << left << "Gamma rates:";
 	switch(foreseqs::categoriesMode) {
@@ -420,7 +445,7 @@ int main(int argc, char * argv[]) {
 	cout << setfill('-') << setw(60) << "" << setfill(' ') << endl;
 	cout << "ForeSeqs was called as follows:" << endl << "  ";
 	for (int i=1; i<argc; i++) cout << argv[i] << " ";
-	cout << endl;
+	cout << endl << endl;
 
 	/* Check partitions / Warn if needed */
 
@@ -579,15 +604,23 @@ int main(int argc, char * argv[]) {
 		pllAlignmentDataDumpConsole(pllAlignment);
 	#endif
 
-		stringstream rep_outputfile;
-		rep_outputfile << outputfile;
-		if (numberOfReplicates > 1) {
-			rep_outputfile << ".R" << rep;
-		}
-		pllAlignmentDataDumpFile(pllAlignment, PLL_FORMAT_PHYLIP,
-				rep_outputfile.str().c_str());
+		cout << "Summarized tree (stolen branches): " << endl;
+		pllTreeToNewick(pllTree->tree_string, pllTree, pllPartitions,
+				pllTree->start->back, true, true, true, false, false,
+				PLL_SUMMARIZE_LH, false, false);
+		cout << pllTree->tree_string << endl;
 
-		cout << "Alignment dumped to " << rep_outputfile.str() << endl << endl;
+		if (foreseqs::predictSequences) {
+			stringstream rep_outputfile;
+			rep_outputfile << outputfile;
+			if (numberOfReplicates > 1) {
+				rep_outputfile << ".R" << rep;
+			}
+			pllAlignmentDataDumpFile(pllAlignment, PLL_FORMAT_PHYLIP,
+					rep_outputfile.str().c_str());
+
+			cout << "Alignment dumped to " << rep_outputfile.str() << endl << endl;
+		}
 	}
 
 #if(TEST_SIM)
