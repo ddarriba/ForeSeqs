@@ -36,6 +36,16 @@ Set the mode for selecting the per-site category (default: r)
 Displays this help message
 
 .TP
+\fB\-H\fR, \fB\-\-threshold\-\fR
+Set a threshold in [0.0, 1.0) for considering a missing sequence
+.br
+A sequence when the proportion of existing sites is less than the threshold
+.br
+For example, if a partition contains 10,000 sites and the threshold is 0.01,
+.br
+all sequences containing equal or less than 100 defined sites will be predicted
+
+.TP
 \fB\-i\fR, \fB\-\-input\-file\fR \fIINPUT_FILE\fR
 Set the input alignment file (mandatory)
 

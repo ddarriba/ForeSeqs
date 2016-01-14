@@ -226,6 +226,7 @@ extern PredMode predictionMode;			/** Prior for predicting the sequences */
 extern unsigned int numberOfRateCategories;	/** Number of gamma rate categories */
 extern unsigned int numberOfTaxa;		/* Number of taxa */
 extern unsigned int numberOfThreads;	/* Number of threads */
+extern double threshold;				/* Threshold for considering sequences as missing data */
 extern unsigned int sequenceLength;		/* Number of sites (aa/bp) */
 extern char ** taxaNames;			/* Name list of taxa */
 extern unsigned int * seqIndexTranslate;	/* Array for translating indexes in PLL instance to PLL alignment */

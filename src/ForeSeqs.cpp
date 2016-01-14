@@ -61,6 +61,9 @@ void exit_with_usage(char * command) {
 	printf("\n\n");
 	printf("  -h, --help                           Shows this help message");
 	printf("\n\n");
+	printf("  -H, --threshold                      Set a threshold in [0.0, 1.0) for considering a missing sequence\n");
+	printf("                                       A sequence when the proportion of existing sites is less than the threshold");
+		printf("\n\n");
 	printf(
 			"  -i, --input      inputFileName       Set the input alignment (mandatory)");
 	printf("\n\n");
@@ -139,12 +142,13 @@ int main(int argc, char * argv[]) {
 			{ "replicates", required_argument, 0, 'r' },
 			{ "seed", required_argument, 0, 's' },
 			{ "output", required_argument, 0, 'o' },
+			{ "threshold", required_argument, 0, 'H' },
 			{ "threads", required_argument, 0, 'T' },
 			{ "skip-prediction", required_argument, 0, 'u' },
 			{ 0, 0, 0, 0 } };
 
 	int opt = 0, long_index = 0;
-	while ((opt = getopt_long(argc, argv, "b:c:hi:I:t:q:r:s:o:p:T:u", long_options,
+	while ((opt = getopt_long(argc, argv, "b:c:hi:I:t:q:r:s:o:p:H:T:u", long_options,
 			&long_index)) != -1) {
 		switch (opt) {
 		case 'b':
@@ -243,6 +247,9 @@ int main(int argc, char * argv[]) {
 		case 's':
 			randomNumberSeed = (unsigned int) atoi(optarg);
 			break;
+		case 'H':
+			foreseqs::threshold = (double) atof(optarg);
+			break;
 		case 'T':
 			foreseqs::numberOfThreads = (unsigned int) atoi(optarg);
 			break;
@@ -305,6 +312,12 @@ int main(int argc, char * argv[]) {
 
 	if (outputfile.length() == 0) {
 		outputfile = (inputfile + ".prediction");
+	}
+
+	if (foreseqs::threshold < 0 || foreseqs::threshold >= 1)
+	{
+		cerr << "[ERROR] Threshold must be in range [0,1)" << endl;
+		exit(EX_IOERR);
 	}
 
 	pllAlignment = pllParseAlignmentFile(PLL_FORMAT_PHYLIP, inputfile.c_str());
@@ -402,6 +415,8 @@ int main(int argc, char * argv[]) {
 	cout << setw(20) << left << "Input tree:" << treefile << endl;
 	cout << setw(20) << left << "Partitions file:" << ((partitionsfile.length() > 0)?partitionsfile:"-") << endl;
 	cout << setw(20) << left << "Output file:" << outputfile << endl;
+	if (foreseqs::threshold > 0)
+		cout << setw(20) << left << "Threshold:" << foreseqs::threshold << endl;
 	cout << setw(20) << left << "Num.Taxa:" << foreseqs::numberOfTaxa << endl;
 	cout << setw(20) << left << "Seq.Length:" << foreseqs::sequenceLength << endl;
 	cout << setw(20) << left << "Branch lengths:";

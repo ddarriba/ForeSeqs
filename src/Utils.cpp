@@ -47,6 +47,8 @@ PredMode predictionMode = PRED_ANCSEQ;
 unsigned int numberOfRateCategories = 4;
 unsigned int numberOfTaxa, sequenceLength;
 unsigned int numberOfThreads = 1;
+double threshold = 0;
+
 char ** taxaNames;
 unsigned int * seqIndexTranslate;
 
@@ -145,14 +147,17 @@ vector< vector<unsigned int> > Utils::findMissingSequences( pllInstance * pllTre
 
 		int start = pllPartitions->partitionData[part]->lower,
 			  end = pllPartitions->partitionData[part]->upper;
+		int count = end - start;
 
-		int missing;
+		int defined_sites;
 		for (unsigned int i = 1; i <= (unsigned int) pllTree->mxtips; i++) {
-			missing = 1;
+			defined_sites = 0;
 			for (int j = start; j < end; j++) {
-				missing &= (pllTree->yVector[i][j] == undefinedSite);
+				if (pllTree->yVector[i][j] != undefinedSite)
+					defined_sites++;
 			}
-			if (missing) {
+			if (defined_sites <= (threshold * count)) {
+				cout << "Add sequence " << i << " " << defined_sites << " " << count << " " << threshold * count << endl;
 				missingSeqs.at(part).push_back(i);
 			}
 		}
