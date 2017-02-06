@@ -24,11 +24,9 @@
 #ifndef PREDICTOR_H_
 #define PREDICTOR_H_
 
+#include "Alignment.h"
 #include "Model.h"
-#ifndef _LIBPLL
-#define _LIBPLL
-#include "libpll/pll.h"
-#endif
+#include "PllDefs.h"
 
 #include <map>
 #include <vector>
@@ -58,9 +56,12 @@ public:
 	 * @param missingSequences The missing sequences in the partition
 	 * @param missingBranches The missing branches in the partition
 	 */
-	Predictor(pllInstance * tree, partitionList * partitions, pllAlignmentData * phylip,
-			unsigned int partitionNumber, std::vector<unsigned int> missingSequences,
-			const std::vector< std::vector<nodeptr> > * missingBranches);
+	Predictor(pll_utree_t * tree,
+		        pll_partition_t * partition,
+						Alignment & alignment,
+			      unsigned int partitionNumber,
+						std::vector<unsigned int> missingSequences,
+			      const std::vector< std::vector<pll_utree_t *> > * missingBranches);
 
 	/**
 	 * @brief Clone constructor
@@ -74,10 +75,8 @@ public:
 
 	/**
 	 * @brief Predict the missing sequences for all taxa
-	 *
-	 * @param[in] originalSequence Optional parameter for comparing the original against the predicted sequences (for testing purposes)
 	 */
-	void predictMissingSequences( const pllAlignmentData * originalSequence = 0 );
+	void predictMissingSequences( void );
 
 	/**
 	 * @brief Predict all sequences one by one, for testing purposes
@@ -123,7 +122,7 @@ private:
 	 *
 	 * @return true, if the node is an ancestor in the missing subtree
 	 */
-	bool isAncestor(nodeptr node) const;
+	bool isAncestor(pll_utree_t * node) const;
 
 	/**
 	 * @brief Check if the branch is missing in a partition
@@ -133,7 +132,7 @@ private:
 	 *
 	 * @return true, if the branch has missing data in the partition
 	 */
-	bool isMissingBranch(const nodeptr node, size_t partition) const;
+	bool isMissingBranch(const pll_utree_t * node, size_t partition) const;
 
 	/**
 	 * @brief Mutates a sequence following the current model starting from the ancestor sequence
@@ -159,7 +158,7 @@ private:
 	 *
 	 * @param node The root node of the missing subtree
 	 */
-	void stealBranchRecursive(const nodeptr node);
+	void stealBranchRecursive(const pll_utree_t * node);
 
 	/**
 	 * @brief Predict the sequences for a whole subtree starting from an ancestral sequence
@@ -167,7 +166,7 @@ private:
 	 * @param node The node to evolve
 	 * @param ancestralSequence The ancestral
 	 */
-	void evolveNode(const nodeptr node, const char * ancestralSequence);
+	void evolveNode(const pll_utree_t * node, const char * ancestralSequence);
 
 	/**
 	 * @brief Predict the sequences for a whole subtree starting from Marginal Ancestral Probabilities
@@ -176,7 +175,7 @@ private:
 	 * @param ancestralProbabilites The marginal ancestral probabilites
 	 * @param ancestralPMatrix The P matrix for the parent node
 	 */
-	void evolveNode(const nodeptr node, const double * ancestralProbabilites, double * ancestralPMatrix = 0);
+	void evolveNode(const pll_utree_t * node, const double * ancestralProbabilites, double * ancestralPMatrix = 0);
 
 	/**
 	 * @brief Compute the branch length for a node
@@ -185,7 +184,7 @@ private:
 	 *
 	 * @return The branch length
 	 */
-	double computeBranchLength(const nodeptr node) const;
+	double computeBranchLength(const pll_utree_t * node) const;
 
 	/**
 	* @brief Recursive algorithm for computing the weighted sum of branch lengths
@@ -194,7 +193,7 @@ private:
 	* @param depth The current depth in the algorithm
 	* @param[out] weight The cummulative weight of subtree at the current node
 	*/
-	double getSumBranches(nodeptr node, int depth, double * weight) const;
+	double getSumBranches(pll_utree_t * node, int depth, double * weight) const;
 
 	/**
 	 * @brief Get the information about the same branch in partitions where it exists
@@ -204,7 +203,7 @@ private:
 	 * @param[out] cumWeight The cumulative weight of the existing branches
 	 * @param[out] branches The list of the branches
 	 */
-	void getBranches(nodeptr node, int depth, double * cumWeight, std::vector<branchInfo> & branches) const;
+	void getBranches(pll_utree_t * node, int depth, double * cumWeight, std::vector<branchInfo> & branches) const;
 
 	/**
 	 * @brief Draws a branch length scaler from a distribution
@@ -218,9 +217,9 @@ private:
 	 */
 	void getRootingNodes();
 
-	pllInstance * _pllTree;	                /** PLL instance */
-	partitionList * _pllPartitions;	        /** PLL list of partitions */
-	pllAlignmentData * _pllAlignment;       /** PLL alignment data */
+	pll_utree_t * _tree;	            /** PLL tree */
+	pll_partition_t * _partition;	  /** PLL partition */
+	Alignment & _alignment;             /** Alignment data */
 
 	unsigned int _partitionNumber;  /** Partition for predicting the sequences */
 	unsigned int _numberOfStates;   /** Number of different states (4 for NT, 20 for AA) */
@@ -229,9 +228,9 @@ private:
 	unsigned int _partitionLength;  /** Number of sites (length) of the partition */
 	short * _catToSite;             /** Assignment of categories to sites */
 
-	std::vector<nodeptr> _missingSubtreesAncestors;                 /** Subtrees ancestors */
+	std::vector<pll_utree_t *> _missingSubtreesAncestors;                 /** Subtrees ancestors */
 	std::vector<unsigned int> _missingSequences;                    /** Vector of taxa with missing sequences */
-	const std::vector< std::vector<nodeptr> > * _missingBranches;   /** Vector of sorted branches with missing sequences */
+	const std::vector< std::vector<pll_utree_t *> > * _missingBranches;   /** Vector of sorted branches with missing sequences */
 	unsigned int _missingPartsCount;                                /** Number of predicted partitions */
 	Model * _currentModel;                                          /** Model for computing the P matrix */
 

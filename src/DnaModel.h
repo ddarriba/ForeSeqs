@@ -41,7 +41,7 @@ public:
 	 * @param pllPartitions The PLL partition list
 	 * @param partitionIndex The current partition
 	 */
-	DnaModel(partitionList * pllPartitions, size_t partitionIndex);
+	DnaModel(pll_partition_t * partition);
 
 	virtual void setMatrix(double * pMatrix, double branchLength, bool cummulative = true);
 	virtual char getState(const double * pMatrix) const;

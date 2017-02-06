@@ -112,20 +112,6 @@ void Utils::matrixMultiply(size_t ncols, size_t nrows, const double * A,
 		transpose(B, ncols);
 }
 
-DataType Utils::getDataType(const partitionList * pllPartitions, size_t numberOfPartition) {
-	switch (pllPartitions->partitionData[numberOfPartition]->states) {
-	case 4:
-		return DT_NUCLEIC;
-	case 20:
-		return DT_PROTEIC;
-	default:
-		cerr << "[ERROR] Invalid number of states (" <<
-		pllPartitions->partitionData[numberOfPartition]->states
-		<< ") for partition " << numberOfPartition << endl;
-		exit(EX_IOERR);
-	}
-}
-
 double Utils::compareNucStates(unsigned char state0, unsigned char state1, bool * validForComp) {
 
 	*validForComp = state1=='A'||state1=='C'||state1=='G'||state1=='T';
@@ -137,23 +123,24 @@ double Utils::compareNucStates(unsigned char state0, unsigned char state1, bool 
 	}
 }
 
-vector< vector<unsigned int> > Utils::findMissingSequences( pllInstance * pllTree, partitionList * pllPartitions ) {
+vector< vector<unsigned int> > Utils::findMissingSequences( pll_partition_t * partitions, size_t numberOfPartitions ) {
 
-	vector< vector<unsigned int> > missingSeqs((size_t)pllPartitions->numberOfPartitions);
+	vector< vector<unsigned int> > missingSeqs(numberOfPartitions);
 
-	for (size_t part = 0; part < (size_t)pllPartitions->numberOfPartitions; part++) {
+	for (size_t part = 0; part < numberOfPartitions; part++) {
 
-		unsigned char undefinedSite = (pllPartitions->partitionData[part]->states==4)?15:22;
+		pll_partition_t * partitions = partitions[part];
+		unsigned char undefinedSite = (partition->states==4)?15:22;
 
-		int start = pllPartitions->partitionData[part]->lower,
-			  end = pllPartitions->partitionData[part]->upper;
+		int start = 0,
+			  end = partition->sites;
 		int count = end - start;
 
 		int defined_sites;
-		for (unsigned int i = 1; i <= (unsigned int) pllTree->mxtips; i++) {
+		for (unsigned int i = 1; i <= (unsigned int) partition->tips; i++) {
 			defined_sites = 0;
 			for (int j = start; j < end; j++) {
-				if (pllTree->yVector[i][j] != undefinedSite)
+				if (pllTree->tipchars[i][j] != undefinedSite)
 					defined_sites++;
 			}
 			if (defined_sites <= (threshold * count)) {
@@ -166,18 +153,20 @@ vector< vector<unsigned int> > Utils::findMissingSequences( pllInstance * pllTre
 	return missingSeqs;
 }
 
-boolean Utils::subtreeIsMissing( pllInstance * pllTree, vector<unsigned int> * missingSequences, 
-	const nodeptr node, vector<nodeptr> * missingBranches ) {
+boolean Utils::subtreeIsMissing( const pll_utree_t * node,
+	                               vector<unsigned int> * missingSequences,
+																 vector<pll_utree_t> * missingBranches,
+															   size_t numberOfTips ) {
 
 	if (find(missingBranches->begin(), missingBranches->end(), node)
 			!= missingBranches->end()) {
 		return true;
 	}
-	if (node->number > pllTree->mxtips) {
-		if (subtreeIsMissing(pllTree, missingSequences, node->next->back,
-				missingBranches)
-				& subtreeIsMissing(pllTree, missingSequences,
-						node->next->next->back, missingBranches)) {
+	if (node->clv_index > numberOfTips) {
+		if (subtreeIsMissing(node->next->back, missingSequences,
+				missingBranches, numeberOfTips)
+				& subtreeIsMissing(node->next->next->back, missingSequences,
+						missingBranches, numberOfTips)) {
 			missingBranches->push_back(node);
 			missingBranches->push_back(node->back);
 			return true;
@@ -185,17 +174,16 @@ boolean Utils::subtreeIsMissing( pllInstance * pllTree, vector<unsigned int> * m
 			return false;
 		}
 	} else {
-		if (find(missingSequences->begin(), missingSequences->end(), node->number)
+		if (find(missingSequences->begin(), missingSequences->end(), node->clv_index)
 				!= missingSequences->end()) {
 
 			missingBranches->push_back(node);
 			missingBranches->push_back(node->back);
 
-
 			/* remove visited taxon */
 			missingSequences->erase(
 					remove(missingSequences->begin(), missingSequences->end(),
-							node->number), missingSequences->end());
+							node->clv_index), missingSequences->end());
 
 			return true;
 		} else {
@@ -204,34 +192,36 @@ boolean Utils::subtreeIsMissing( pllInstance * pllTree, vector<unsigned int> * m
 	}
 }
 
-nodeptr Utils::findRootingNode( pllInstance * pllTree, vector<unsigned int> * missingSequences, 
-	nodeptr startingNode, vector<nodeptr> * missingBranches ) {
+pll_utree_t * Utils::findRootingNode( pll_utree_t * tree,
+	                                    vector<unsigned int> * missingSequences,
+														      	  vector<pll_utree_t *> * missingBranches,
+														      	  size_t numberOfTips ) {
 
-	nodeptr currentNode;
+	pll_utree_t * currentNode;
 
 	if (!missingSequences->size()) {
 		return(0);
 	}
 
-	if (startingNode->back->number <= pllTree->mxtips) {
+	if (tree->back->clv_index <= numberOfTips) {
 		missingSequences->erase(
 				remove(missingSequences->begin(), missingSequences->end(),
-						startingNode->back->number), missingSequences->end());
+						tree->back->clv_index), missingSequences->end());
 	}
 
 	/* start searching in a random missing node */
-	currentNode = startingNode;
+	currentNode = tree;
 
 	while (true) {
-		bool missingRight = subtreeIsMissing(pllTree, missingSequences, currentNode->next->back, missingBranches);
-		bool missingLeft = subtreeIsMissing(pllTree, missingSequences, currentNode->next->next->back, missingBranches);
+		bool missingRight = subtreeIsMissing(currentNode->next->back, missingSequences, missingBranches, numberOfTips);
+		bool missingLeft = subtreeIsMissing(currentNode->next->next->back, missingSequences, missingBranches, numberOfTips);
 
 		if (missingRight && missingLeft) {
 			cerr << "ERROR: Everything is missing!!" << endl;
 			exit(EX_IOERR);
 		} else if (!(missingRight || missingLeft)) {
 #ifdef PRINT_TRACE
-			cout << "TRACE: Found ancestor in " << currentNode->number << endl;
+			cout << "TRACE: Found ancestor in " << currentNode->clv_index << endl;
 #endif
 
 			missingBranches->push_back(currentNode);
@@ -247,26 +237,31 @@ nodeptr Utils::findRootingNode( pllInstance * pllTree, vector<unsigned int> * mi
 							currentNode->next->back :
 							currentNode->next->next->back;
 #ifdef PRINT_TRACE
-			cout << "TRACE: Moving node to " << currentNode->number << endl;
+			cout << "TRACE: Moving node to " << currentNode->clv_index << endl;
 #endif
 		}
 	}
 
 }
 
-static bool compareNodes (nodeptr a, nodeptr b) { return (a->number < b->number); }
+static bool compareNodes (pll_utree_t * a, pll_utree_t * b) {
+	return (a->clv_index < b->clv_index);
+}
 
-std::vector< std::vector<nodeptr> > Utils::findMissingBranches ( pllInstance * pllTree, partitionList * pllPartitions, 
-	vector< vector<unsigned int> > missingSequences ) {
+vector< vector<pll_utree_t *> > Utils::findMissingBranches (
+															  pll_utree_t ** tipNodes,
+																vector< vector<unsigned int> > missingSequences,
+																size_t numberOfTips,
+															  size_t numberOfPartitions ) {
 
-	vector< vector<nodeptr> > missingBranches((size_t)pllPartitions->numberOfPartitions);
+	vector< vector<pll_utree_t *> > missingBranches((size_t)numberOfPartitions);
 
-	for (size_t part = 0; part < (size_t)pllPartitions->numberOfPartitions; part++) {
+	for (size_t part = 0; part < numberOfPartitions; part++) {
 		while (missingSequences[part].size()) {
-			nodeptr startingNode =
-					pllTree->nodep[missingSequences[part][0]]->back;
-			findRootingNode(pllTree, &missingSequences[part], startingNode,
-					&missingBranches[part]);
+			findRootingNode(tipNodes[part]->back,
+				              &missingSequences[part],
+											&missingBranches[part],
+											numberOfTips);
 		}
 		sort(missingBranches[part].begin(), missingBranches[part].end(), compareNodes);
 	}
@@ -287,60 +282,61 @@ void * Utils::allocate(size_t n, size_t el_size) {
 	return mem;
 }
 
-void Utils::optimizeModelParameters(pllInstance * pllTree,
-		partitionList * pllPartitions) {
-	double lk = 0.0;
-	double epsilon = 0.01;
-	bool optimizeBranchLengths = pllPartitions->numberOfPartitions > 1;
-
-	if (optimizeBranchLengths) {
-		/*
-		 * Optimize per-gene branch lengths.
-		 */
-		cout << "Optimizing per-gene branch lengths / model parameters " << endl;
-
-		int smoothIterations = 64;
-		do {
-			lk = pllTree->likelihood;
-			pllOptimizeBranchLengths(pllTree, pllPartitions, smoothIterations);
-			pllOptimizeModelParameters(pllTree, pllPartitions, 0.1);
-		} while (fabs(lk - pllTree->likelihood) > epsilon);
-	} else {
-		/*
-		 * In case there is one single partition, we do not optimize the branch lengths.
-		 * Otherwise we would have weird results in the branches with missing data.
-		 */
-		cout << "Optimizing model parameters " << endl;
-
-		pllOptRatesGeneric(pllTree, pllPartitions, 1.0,
-				pllPartitions->rateList);
-		pllEvaluateLikelihood(pllTree, pllPartitions, pllTree->start, true,
-				false);
-		pllOptBaseFreqs(pllTree, pllPartitions, 1.0, pllPartitions->freqList);
-		pllEvaluateLikelihood(pllTree, pllPartitions, pllTree->start, true,
-				false);
-		pllOptAlphasGeneric(pllTree, pllPartitions, 1.0,
-				pllPartitions->alphaList);
-		pllEvaluateLikelihood(pllTree, pllPartitions, pllTree->start, true,
-				false);
-		do {
-			lk = pllTree->likelihood;
-			pllEvaluateLikelihood(pllTree, pllPartitions, pllTree->start, true,
-					false);
-			pllOptRatesGeneric(pllTree, pllPartitions, 0.1,
-					pllPartitions->rateList);
-			pllEvaluateLikelihood(pllTree, pllPartitions, pllTree->start, true,
-					false);
-			pllOptBaseFreqs(pllTree, pllPartitions, 0.1,
-					pllPartitions->freqList);
-			pllEvaluateLikelihood(pllTree, pllPartitions, pllTree->start, true,
-					false);
-			pllOptAlphasGeneric(pllTree, pllPartitions, 0.1,
-					pllPartitions->alphaList);
-			pllEvaluateLikelihood(pllTree, pllPartitions, pllTree->start, true,
-					false);
-		} while (fabs(lk - pllTree->likelihood) > epsilon);
-	}
+void Utils::optimizeModelParameters(pll_partition_t ** partitions,
+																		pll_utree_t ** trees,
+																		size_t numberOfPartitions) {
+	// double lk = 0.0;
+	// double epsilon = 0.01;
+	// bool optimizeBranchLengths = pllPartitions->numberOfPartitions > 1;
+	//
+	// if (optimizeBranchLengths) {
+	// 	/*
+	// 	 * Optimize per-gene branch lengths.
+	// 	 */
+	// 	cout << "Optimizing per-gene branch lengths / model parameters " << endl;
+	//
+	// 	int smoothIterations = 64;
+	// 	do {
+	// 		lk = pllTree->likelihood;
+	// 		pllOptimizeBranchLengths(pllTree, pllPartitions, smoothIterations);
+	// 		pllOptimizeModelParameters(pllTree, pllPartitions, 0.1);
+	// 	} while (fabs(lk - pllTree->likelihood) > epsilon);
+	// } else {
+	// 	/*
+	// 	 * In case there is one single partition, we do not optimize the branch lengths.
+	// 	 * Otherwise we would have weird results in the branches with missing data.
+	// 	 */
+	// 	cout << "Optimizing model parameters " << endl;
+	//
+	// 	pllOptRatesGeneric(pllTree, pllPartitions, 1.0,
+	// 			pllPartitions->rateList);
+	// 	pllEvaluateLikelihood(pllTree, pllPartitions, pllTree->start, true,
+	// 			false);
+	// 	pllOptBaseFreqs(pllTree, pllPartitions, 1.0, pllPartitions->freqList);
+	// 	pllEvaluateLikelihood(pllTree, pllPartitions, pllTree->start, true,
+	// 			false);
+	// 	pllOptAlphasGeneric(pllTree, pllPartitions, 1.0,
+	// 			pllPartitions->alphaList);
+	// 	pllEvaluateLikelihood(pllTree, pllPartitions, pllTree->start, true,
+	// 			false);
+	// 	do {
+	// 		lk = pllTree->likelihood;
+	// 		pllEvaluateLikelihood(pllTree, pllPartitions, pllTree->start, true,
+	// 				false);
+	// 		pllOptRatesGeneric(pllTree, pllPartitions, 0.1,
+	// 				pllPartitions->rateList);
+	// 		pllEvaluateLikelihood(pllTree, pllPartitions, pllTree->start, true,
+	// 				false);
+	// 		pllOptBaseFreqs(pllTree, pllPartitions, 0.1,
+	// 				pllPartitions->freqList);
+	// 		pllEvaluateLikelihood(pllTree, pllPartitions, pllTree->start, true,
+	// 				false);
+	// 		pllOptAlphasGeneric(pllTree, pllPartitions, 0.1,
+	// 				pllPartitions->alphaList);
+	// 		pllEvaluateLikelihood(pllTree, pllPartitions, pllTree->start, true,
+	// 				false);
+	// 	} while (fabs(lk - pllTree->likelihood) > epsilon);
+	// }
 }
 
 } /* namespace foreseqs */

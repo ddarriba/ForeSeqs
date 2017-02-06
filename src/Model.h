@@ -24,10 +24,7 @@
 #ifndef MODEL_H_
 #define MODEL_H_
 
-#ifndef _LIBPLL
-#define _LIBPLL
-#include "libpll/pll.h"
-#endif
+#include "PllDefs.h"
 
 #include <map>
 #include <vector>
@@ -42,10 +39,9 @@ public:
 	/**
 	 * @brief Constructs a new model
 	 *
-	 * @param pllPartitions The PLL partition list
-	 * @param partitionIndex The current partition
+	 * @param partition The partition data
 	 */
-	Model(partitionList * pllPartitions, size_t partitionIndex);
+	Model(pll_partition_t * partition);
 
 	/**
 	 * @brief Copy constructor
@@ -118,7 +114,8 @@ protected:
 	 */
 	void constructPMatrix(double * pMatrix, double branchLength, bool cummulative, size_t numStates, const double * eigenValues, const double * Cijk);
 
-	pInfo * _pllPartitionInfo;            /** PLL Partition info */
+  pll_partition_t * _partition;
+	size_t numberOfStates;                /** Number of states */
 	std::vector<double> _frequencies;     /** Frequencies */
 	std::vector<double> _substRates;      /** Substitution rates */
 	std::vector<char> _charStates;        /** Vector of the different states */

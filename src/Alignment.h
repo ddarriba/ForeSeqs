@@ -24,28 +24,38 @@
 #ifndef ALIGNMENT_H_
 #define ALIGNMENT_H_
 
+#include "Utils.h"
+
 #include <vector>
+#include <string>
+
+namespace foreseqs {
 
 typedef struct {
   int start;
   int end;
-}
-
-namespace foreseqs {
+  DataType dataType;
+} PartitionDesc;
 
 class Alignment {
 public:
-  Alignment(const & std::string filename);
+  Alignment(const std::string & filename);
   ~Alignment( void );
 
-  int loadPartitionsFile(const & std::string filename);
+  int loadPartitionsFile(const std::string & filename);
 
   unsigned int getSequenceCount( void ) const;
-  unsigned int getSequenceLength( void ) const;
+  unsigned int getSequenceLength( int partId = -1 ) const;
+
+  unsigned int getNumberOfPartitions( void ) { return partitionDescriptors.size(); }
+  unsigned int getStartPosition( int partId = -1 ) const;
+  unsigned int getEndPosition( int partId = -1 ) const;
+  DataType getDataType(int partId) const;
 private:
   pll_msa_t * msa;
   unsigned int sequenceCount;
   unsigned int sequenceLength;
+  std::vector< PartitionDesc > partitionDescriptors;
 };
 
 #include "libpll/pll.h"

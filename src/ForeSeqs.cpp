@@ -26,10 +26,6 @@
 #include "Alignment.h"
 
 #include "config.h"
-#ifndef _LIBPLL
-#define _LIBPLL
-#include "libpll/pll.h"
-#endif
 
 #include <iostream>
 #include <iomanip>
@@ -40,6 +36,8 @@
 #include <cassert>
 #include <getopt.h>
 #include <time.h>
+
+#include "PllDefs.h"
 
 using namespace std;
 
@@ -537,51 +535,55 @@ int main(int argc, char * argv[]) {
 		if (numberOfReplicates > 1) {
 			cout << "Replicate " << rep+1 << " of " << numberOfReplicates << endl;
 		}
+
 		for (unsigned int currentPartition = 0;
 				currentPartition < (unsigned int) pllPartitions->numberOfPartitions;
-				currentPartition++) {
+				currentPartition++)
+		{
 
 			foreseqs::Predictor sequencePredictor(pllTree, pllPartitions,
 					pllAlignment, currentPartition, missingSequences[currentPartition],
 					&missingBranches);
 
-#if(TEST_SIM)
-			cout << endl << "T(ini," << currentPartition << "): ";
-			pllTreeToNewick(pllTree->tree_string, pllTree, pllPartitions,
-					pllTree->start->back, true, true, true, false, false,
-					currentPartition, false, false);
-			cout << pllTree->tree_string << endl;
-
-			if (originalFileDefined) {
-				sequencePredictor.predictMissingSequences(originalAlignment);
-				if (sequencePredictor.getMissingPartsCount()) {
-					cout << "Similarity in partition "
-							<< pllPartitions->partitionData[currentPartition]->partitionName
-							<< ": "
-							<< 100 * sequencePredictor.getSequenceSimilarity()
-							<< "%" << endl;
-				}
-			} else {
-				sequencePredictor.predictMissingSequences();
-			}
-
-			cout << endl << "T(end," << currentPartition << "): ";
-			pllTreeToNewick(pllTree->tree_string, pllTree, pllPartitions,
-					pllTree->start->back, true, true, true, false, false,
-					currentPartition, false, false);
-			cout << pllTree->tree_string << endl;
+		 	sequencePredictor.predictMissingSequences();
 		}
 
-		cout << endl << "T(end,avg): ";
-		pllTreeToNewick(pllTree->tree_string, pllTree, pllPartitions,
-				pllTree->start->back, true, true, true, false, false,
-				PLL_SUMMARIZE_LH, false, false);
-		cout << pllTree->tree_string << endl;
-
-#else
-			sequencePredictor.predictMissingSequences();
-		}
-#endif
+// #if(TEST_SIM)
+// 			cout << endl << "T(ini," << currentPartition << "): ";
+// 			pllTreeToNewick(pllTree->tree_string, pllTree, pllPartitions,
+// 					pllTree->start->back, true, true, true, false, false,
+// 					currentPartition, false, false);
+// 			cout << pllTree->tree_string << endl;
+//
+// 			if (originalFileDefined) {
+// 				sequencePredictor.predictMissingSequences(originalAlignment);
+// 				if (sequencePredictor.getMissingPartsCount()) {
+// 					cout << "Similarity in partition "
+// 							<< pllPartitions->partitionData[currentPartition]->partitionName
+// 							<< ": "
+// 							<< 100 * sequencePredictor.getSequenceSimilarity()
+// 							<< "%" << endl;
+// 				}
+// 			} else {
+// 				sequencePredictor.predictMissingSequences();
+// 			}
+//
+// 			cout << endl << "T(end," << currentPartition << "): ";
+// 			pllTreeToNewick(pllTree->tree_string, pllTree, pllPartitions,
+// 					pllTree->start->back, true, true, true, false, false,
+// 					currentPartition, false, false);
+// 			cout << pllTree->tree_string << endl;
+// 		}
+//
+// 		cout << endl << "T(end,avg): ";
+// 		pllTreeToNewick(pllTree->tree_string, pllTree, pllPartitions,
+// 				pllTree->start->back, true, true, true, false, false,
+// 				PLL_SUMMARIZE_LH, false, false);
+// 		cout << pllTree->tree_string << endl;
+// #else
+// 			sequencePredictor.predictMissingSequences();
+// 		}
+// #endif
 
 		currentTime = time(NULL);
 		cout << endl << "Prediction done. It took " << currentTime - startTime << " seconds." << endl << endl;

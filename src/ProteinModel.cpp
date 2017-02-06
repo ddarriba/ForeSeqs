@@ -36,18 +36,18 @@ using namespace std;
 
 namespace foreseqs {
 
-ProteinModel::ProteinModel(partitionList * pllPartitions, size_t partitionIndex) :
-		Model(pllPartitions, partitionIndex) {
+ProteinModel::ProteinModel(pll_partition_t * partition) :
+		Model(partition) {
 
-	assert(_pllPartitionInfo->states == NUM_AA);
+	assert(partition->states == NUM_AA);
 
 	size_t numFreqs = NUM_AA;
 	size_t numRates = (NUM_AA - 1) * NUM_AA / 2;
 	_frequencies.resize(numFreqs);
 	_substRates.resize(numRates);
-	memcpy(&(_frequencies[0]), _pllPartitionInfo->frequencies,
+	memcpy(&(_frequencies[0]), _partitionInfo->frequencies[0],
 			numFreqs * sizeof(double));
-	memcpy(&(_substRates[0]), _pllPartitionInfo->substRates,
+	memcpy(&(_substRates[0]), _partitionInfo->subst_params[0],
 			numRates * sizeof(double));
 
 	char statesChar[23] = { 'A', 'R', 'N', 'D', 'C', 'Q', 'E', 'G', 'H', 'I',
@@ -87,14 +87,14 @@ void ProteinModel::SetupGTR( void ) {
 
 	double fracchange = computeFracchange();
 	for (size_t i = 0; i < NUM_AA; i++) {
-		_eigenValues[i] = -_pllPartitionInfo->EIGN[i] / fracchange;
+		_eigenValues[i] = -_partition->eigenvals[0][i] / fracchange;
 	}
 
 	for (size_t i = 0; i < NUM_AA; i++) {
 		for (size_t j = 0; j < NUM_AA; j++) {
 			for (size_t k = 0; k < NUM_AA; k++) {
-				_Cijk[i * SQNUM_AA + j * NUM_AA + k] = _pllPartitionInfo->EI[i * NUM_AA + k]
-										* _pllPartitionInfo->EV[j * NUM_AA + k];
+				_Cijk[i * SQNUM_AA + j * NUM_AA + k] = _partition->eigenvecs[0][i * NUM_AA + k]
+										* _partition->eigenvecs[0][j * NUM_AA + k];
 			}
 		}
 	}

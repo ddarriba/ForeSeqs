@@ -33,17 +33,17 @@ using namespace std;
 
 namespace foreseqs {
 
-DnaModel::DnaModel(partitionList * pllPartitions, size_t partitionIndex) :
-		Model(pllPartitions, partitionIndex) {
+DnaModel::DnaModel(pll_partition_t * partition) :
+		Model(partition) {
 
-	assert (_pllPartitionInfo->states == NUM_NUC);
+	assert (partition->states == NUM_NUC);
 
 	size_t numFreqs = NUM_NUC;
 	size_t numRates = (NUM_NUC - 1) * NUM_NUC / 2;
 	_frequencies.resize(numFreqs);
 	_substRates.resize(numRates);
-	memcpy(&(_frequencies[0]), _pllPartitionInfo->frequencies, numFreqs * sizeof(double));
-	memcpy(&(_substRates[0]), _pllPartitionInfo->substRates, numRates * sizeof(double));
+	memcpy(&(_frequencies[0]), partition->frequencies[0], numFreqs * sizeof(double));
+	memcpy(&(_substRates[0]), partition->subst_params[0], numRates * sizeof(double));
 
 	char statesChar[16] = {'_', 'A', 'C', 'M', 'G', 'R', 'S', 'V', 'T', 'W', 'Y', 'H', 'K', 'D', 'B', '-'};
 	_charStates.assign(&statesChar[0], &statesChar[0]+16);
@@ -63,14 +63,14 @@ void DnaModel::SetupGTR( void ) {
 
 	double fracchange = computeFracchange();
 	for (size_t i = 0; i < NUM_NUC; i++) {
-		_eigenValues[i] = -_pllPartitionInfo->EIGN[i] / fracchange;
+		_eigenValues[i] = -_partition->eigenvals[0][i] / fracchange;
 	}
 
 	for (size_t i = 0; i < NUM_NUC; i++) {
 		for (size_t j = 0; j < NUM_NUC; j++) {
 			for (size_t k = 0; k < NUM_NUC; k++) {
-				_Cijk[i * SQNUM_NUC + j * NUM_NUC + k] = _pllPartitionInfo->EI[i * NUM_NUC + k]
-										* _pllPartitionInfo->EV[j * NUM_NUC + k];
+				_Cijk[i * SQNUM_NUC + j * NUM_NUC + k] = _partition->eigenvecs[0][i * NUM_NUC + k]
+										* _partition->eigenvecs[0][j * NUM_NUC + k];
 			}
 		}
 	}

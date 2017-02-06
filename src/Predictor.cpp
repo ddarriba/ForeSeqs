@@ -21,11 +21,6 @@
  *  along with ForeSeqs.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "Predictor.h"
-#include "DnaModel.h"
-#include "ProteinModel.h"
-#include "Utils.h"
-
 #include <iostream>
 #include <sstream>
 #include <iomanip>
@@ -35,6 +30,11 @@
 #include <cmath>
 #include <cstdlib>
 #include <alloca.h>
+
+#include "Predictor.h"
+#include "DnaModel.h"
+#include "ProteinModel.h"
+#include "Utils.h"
 
 #ifdef _USE_OPENBLAS_
 #include <cblas.h>
@@ -46,14 +46,18 @@ using namespace std;
 
 namespace foreseqs {
 
-Predictor::Predictor(pllInstance * tree, partitionList * partitions,
-		pllAlignmentData * phylip, unsigned int partitionNumber,
-		std::vector<unsigned int> missingSequences,
-		const std::vector< std::vector<nodeptr> > * missingBranches) :
-		_pllTree(tree), _pllPartitions(partitions), _pllAlignment(phylip),
+Predictor::Predictor(pll_utree_t * tree,
+					pll_partition_t * partition,
+					Alignment & alignment,
+					unsigned int partitionNumber,
+					vector<unsigned int> missingSequences,
+					const vector< vector<pll_utree_t *> > * missingBranches) :
+		    _tree(tree),
+				_partition(partition),
+		    _alignment(alignment),
 				_partitionNumber(partitionNumber), _numberOfStates(0),
-				_start((unsigned int)partitions->partitionData[partitionNumber]->lower),
-				_end((unsigned int)partitions->partitionData[partitionNumber]->upper),
+				_start(alignment.getStartPosition(partitionNumber)),
+				_end(alignment.getEndPosition(partitionNumber)),
 				_partitionLength(_end - _start), _catToSite(0),
 				_missingSubtreesAncestors(),
 				_missingSequences(missingSequences), _missingBranches(missingBranches),
@@ -61,11 +65,11 @@ Predictor::Predictor(pllInstance * tree, partitionList * partitions,
 				_currentModel(0), _seqSimilarity(0),
 				_branchLengthScaler(1.0), _scalers() {
 
-	if (Utils::getDataType(partitions, partitionNumber) == DT_NUCLEIC) {
-		_currentModel = new DnaModel(partitions, partitionNumber);
+	if (alignment.getDataType(partitionNumber) == DT_NUCLEIC) {
+		_currentModel = new DnaModel(partition);
 		_numberOfStates = 4;
 	} else {
-		_currentModel = new ProteinModel(partitions, partitionNumber);
+		_currentModel = new ProteinModel(partition);
 		_numberOfStates = 20;
 	}
 
@@ -98,50 +102,52 @@ Predictor::Predictor(pllInstance * tree, partitionList * partitions,
 					exit(EX_MEMORY);
 				}
 				memcpy(gammaRates,
-						_pllPartitions->partitionData[partitionNumber]->gammaRates,
-						numberOfRateCategories * sizeof(double));
+						_partition->rates,
+						_partition->rate_cats * sizeof(double));
 
-				/* initialize the per-site likelihoods to a lower bound, e.g., the global likelihood */
+				/* initialize the per-site likelihoods to a lower bound */
 				for (size_t i = 0; i < _partitionLength; i++) {
-					perSiteLikelihoods[i] = _pllTree->likelihood;
+					perSiteLikelihoods[i] = -10000;
 				}
 
 				for (short k = 0; k < (short)numberOfRateCategories; k++) {
 
-					/* set all gamma rates to the same value */
-					for (unsigned int i = 0; i < numberOfRateCategories; i++) {
-						_pllPartitions->partitionData[partitionNumber]->gammaRates[i] =
-								gammaRates[k];
-					}
+					//TODO: USE ONE SINGLE CATEGORY
 
-					/* get per-site likelihood */
-					pllEvaluateLikelihood(_pllTree, _pllPartitions,
-							_pllTree->start, true, true);
-
-					double * X =
-							_pllPartitions->partitionData[partitionNumber]->perSiteLikelihoods;
-					double * Y = perSiteLikelihoods;
-					for (size_t i = 0; i < _partitionLength; i++) {
-						/* if likelihood improves, set this category */
-						if (*X > *Y) {
-							*Y = *X;
-							catToSiteCount[_catToSite[i]]--;
-							catToSiteCount[k]++;
-							_catToSite[i] = k;
-						}
-						X++;
-						Y++;
-					}
+					// /* set all gamma rates to the same value */
+					// for (unsigned int i = 0; i < numberOfRateCategories; i++) {
+					// 	_partition->rates[i] =
+					// 			gammaRates[k];
+					// }
+					//
+					// /* get per-site likelihood */
+					// pllEvaluateLikelihood(_tree, _partition,
+					// 		_tree->start, true, true);
+					//
+					// double * X =
+					// 		_partition->partitionData[partitionNumber]->perSiteLikelihoods;
+					// double * Y = perSiteLikelihoods;
+					// for (size_t i = 0; i < _partitionLength; i++) {
+					// 	/* if likelihood improves, set this category */
+					// 	if (*X > *Y) {
+					// 		*Y = *X;
+					// 		catToSiteCount[_catToSite[i]]--;
+					// 		catToSiteCount[k]++;
+					// 		_catToSite[i] = k;
+					// 	}
+					// 	X++;
+					// 	Y++;
+					// }
 				}
 
 				free(perSiteLikelihoods);
 
-				/* reset rates */
-				memcpy(
-						_pllPartitions->partitionData[partitionNumber]->gammaRates,
-						gammaRates, numberOfRateCategories * sizeof(double));
-				pllEvaluateLikelihood(_pllTree, _pllPartitions, _pllTree->start,
-						true, true);
+				// /* reset rates */
+				// memcpy(
+				// 		_partition->rates,
+				// 		gammaRates, numberOfRateCategories * sizeof(double));
+				// pllEvaluateLikelihood(_tree, _partition, _tree->start,
+				// 		true, true);
 
 			}
 
@@ -150,7 +156,7 @@ Predictor::Predictor(pllInstance * tree, partitionList * partitions,
 			cout << "Per site Gamma rate categories assignment:" << endl;
 			for (unsigned int k = 0; k < numberOfRateCategories; k++) {
 				cout << "  " << k << ": " << setprecision(5)
-						<< _pllPartitions->partitionData[partitionNumber]->gammaRates[k]
+						<< _partition->rates[k]
 						<< " (" << setprecision(2)
 						<< (double) 100.0 * catToSiteCount[k] / _partitionLength
 						<< "%)" << endl;
@@ -162,8 +168,8 @@ Predictor::Predictor(pllInstance * tree, partitionList * partitions,
 }
 
 Predictor::Predictor(const Predictor& other) :
-				_pllTree(other._pllTree), _pllPartitions(other._pllPartitions),
-						_pllAlignment(other._pllAlignment),
+				_tree(other._tree), _partition(other._partition),
+						_alignment(other._alignment),
 						_partitionNumber(other._partitionNumber),
 						_numberOfStates(other._numberOfStates),
 						_start(other._start),_end(other._end),
@@ -187,9 +193,9 @@ Predictor::~Predictor( void ) {
 }
 
 Predictor& Predictor::operator=(const Predictor& other) {
-	_pllTree = other._pllTree;
-	_pllPartitions = other._pllPartitions;
-	_pllAlignment = other._pllAlignment;
+	_tree = other._tree;
+	_partition = other._partition;
+	_alignment = other._alignment;
 	_partitionNumber = other._partitionNumber;
 	_numberOfStates = other._numberOfStates;
 	_start = other._start;
@@ -211,7 +217,6 @@ void Predictor::mutateSequence(char * currentSequence,
 		const char * ancestralSequence, double branchLength) {
 
 	char * seqPtr;
-	double * gammaRates = (double *) alloca (numberOfRateCategories * sizeof(double));
 	int substitutionsCount = 0;
 
 	if ( _partitionLength != strlen(ancestralSequence) ) {
@@ -227,8 +232,6 @@ void Predictor::mutateSequence(char * currentSequence,
 	/* start mutating the ancestral sequence */
 	strcpy(currentSequence, ancestralSequence);
 
-	pllMakeGammaCats(_pllPartitions->partitionData[_partitionNumber]->alpha, gammaRates, (int)numberOfRateCategories, false);
-
 	seqPtr = currentSequence;
 
 	/* construct and validate P matrix */
@@ -239,7 +242,7 @@ void Predictor::mutateSequence(char * currentSequence,
 
 	for (unsigned int i = 0; i < numberOfRateCategories; i++) {
 		/* compute cummulative P matrix */
-		_currentModel->setMatrix(matrix[i], gammaRates[i] * branchLength, true);
+		_currentModel->setMatrix(matrix[i], _partition->rates[i] * branchLength, true);
 
 		/* verify that last per-row value is 1.0 */
 		for (unsigned int j = 0; j < _numberOfStates; j++) {
@@ -304,28 +307,30 @@ void Predictor::mutateSequence(char * currentSequence,
 		delete[] matrix[i];
 	}
 	delete[] matrix;
-	
+
 	cout << "    - Substitutions from ancestral = " << setprecision(2) << (double)100.0*substitutionsCount/_partitionLength << "%" << endl;
 }
 
 #ifdef DEBUG
-void printNodes(pllInstance * _pllTree, partitionList * _pllPartitions) {
+void printNodes(pllInstance * _tree, partitionList * _partition) {
 	/* compute the branch length as the average over all other partitions */
-	for (int node = 1; node <= 2 * _pllTree->mxtips - 3; node++) {
-		cout << node << " " << _pllTree->nodep[node]->next->back->number << " "
-				<< _pllTree->nodep[node]->next->next->back->number << endl;
-	}
+	//TODO
+	// for (int node = 0; node < 2 * _tree->mxtips - 3; node++) {
+	// 	cout << node << " " << _tree->nodep[node]->next->back->clv_index << " "
+	// 			<< _tree->nodep[node]->next->next->back->clv_index << endl;
+	// }
 }
 
-void printBranchLengths(pllInstance * _pllTree, partitionList * _pllPartitions) {
+void printBranchLengths(pllInstance * _tree, partitionList * _partition) {
 	/* compute the branch length as the average over all other partitions */
-	for (int i=0; i<_pllPartitions->numberOfPartitions; i++) {
-		cout << i << " -> ";
-		for (int node=1; node <= 2*_pllTree->mxtips-3; node++) {
-			cout << " " << pllGetBranchLength(_pllTree, _pllPartitions, _pllTree->nodep[node], i);
-		}
-		cout << endl;
-	}
+	//TODO
+	// for (int i=0; i<_alignment.getNumberOfPartitions(); i++) {
+	// 	cout << i << " -> ";
+	// 	for (int node=1; node <= 2*_tree->mxtips-3; node++) {
+	// 		cout << " " << pllGetBranchLength(_tree, _partition, _tree->nodep[node], i);
+	// 	}
+	// 	cout << endl;
+	// }
 }
 #endif
 
@@ -337,24 +342,24 @@ double Predictor::drawBranchLengthScaler( void ) const {
 	return (_scalers[j].scaler);
 }
 
-double Predictor::computeBranchLength(const nodeptr node) const {
+double Predictor::computeBranchLength(const pll_utree_t * node) const {
 
 	double branchLength = 0.0;
 
-	if (isMissingBranch(node, _partitionNumber) && _pllPartitions->numberOfPartitions > 1) {
+	if (isMissingBranch(node, _partitionNumber) && _alignment.getNumberOfPartitions() > 1) {
 		int sumwgt = 0;
 
 		/* compute the total weight */
 		for (unsigned int i = 0;
-						i < (unsigned int) _pllPartitions->numberOfPartitions; i++) {
+						i < (unsigned int) _alignment.getNumberOfPartitions(); i++) {
 			if (!isMissingBranch(node, i)) {
-				sumwgt += _pllPartitions->partitionData[i]->width;
+				sumwgt += _alignment.getSequenceLength(i);
 			}
 		}
 
 		if (sumwgt == 0) {
 			cerr << "Error: There is no information available for stealing branch length ("
-					<< node->number << "," << node->back->number << ")" << endl;
+					<< node->clv_index << "," << node->back->clv_index << ")" << endl;
 		}
 
 		assert(sumwgt > 0);
@@ -362,18 +367,18 @@ double Predictor::computeBranchLength(const nodeptr node) const {
 		double sumFactors = 0.0;
 		/* compute the branch length as the average over all other partitions */
 		for (unsigned int i = 0;
-				i < (unsigned int) _pllPartitions->numberOfPartitions; i++) {
+				i < (unsigned int) _alignment.getNumberOfPartitions(); i++) {
 			if (!isMissingBranch(node, i)) {
-				double factor = (double) _pllPartitions->partitionData[i]->width / (double) sumwgt;
+				double factor = (double) _alignment.getSequenceLength(i) / (double) sumwgt;
 				sumFactors += factor;
-				double currentBL = pllGetBranchLength(_pllTree, _pllPartitions, node, (int) i) * factor;
+				double currentBL = pllGetBranchLength(_tree, _partition, node, (int) i) * factor;
 				branchLength += currentBL;
 			}
 		}
 		assert(Utils::floatEquals(sumFactors, 1.0));
 	} else {
 		/* return the current and only branch length */
-		branchLength = pllGetBranchLength(_pllTree, _pllPartitions, node, (int)_partitionNumber);
+		branchLength = pllGetBranchLength(_tree, _partition, node, (int)_partitionNumber);
 	}
 
 	switch (branchLengthsMode) {
@@ -392,7 +397,7 @@ double Predictor::computeBranchLength(const nodeptr node) const {
 
 	/* branch length correction */
 	branchLength = max(branchLength, MIN_BR_LEN);
-	pllSetBranchLength(_pllTree,_pllPartitions, node, (int)_partitionNumber, branchLength);
+	pllSetBranchLength(_tree,_partition, node, (int)_partitionNumber, branchLength);
 	return branchLength;
 }
 
@@ -410,7 +415,7 @@ static double computeWeight(double x) {
 	return w;
 }
 
-bool Predictor::isAncestor(nodeptr node) const {
+bool Predictor::isAncestor(pll_utree_t * node) const {
 	if (find(_missingSubtreesAncestors.begin(),
 				_missingSubtreesAncestors.end(), node)
 				== _missingSubtreesAncestors.end())
@@ -418,7 +423,7 @@ bool Predictor::isAncestor(nodeptr node) const {
 	return true;
 }
 
-bool Predictor::isMissingBranch(const nodeptr node, size_t partition) const {
+bool Predictor::isMissingBranch(const pll_utree_t * node, size_t partition) const {
 	if (find(_missingBranches->at(partition).begin(),
 			_missingBranches->at(partition).end(), node)
 				== _missingBranches->at(partition).end())
@@ -426,7 +431,7 @@ bool Predictor::isMissingBranch(const nodeptr node, size_t partition) const {
 	return true;
 }
 
-void Predictor::getBranches(nodeptr node, int depth, double * cumWeight, vector<branchInfo> & branches) const {
+void Predictor::getBranches(pll_utree_t * node, int depth, double * cumWeight, vector<branchInfo> & branches) const {
 
 	double localSum = 0.0, ratio = 0.0, curWeight = 0.0;
 	int sumWgt = 0;
@@ -437,27 +442,27 @@ void Predictor::getBranches(nodeptr node, int depth, double * cumWeight, vector<
 		if (!isMissingBranch(node, _partitionNumber)) {
 
 			for (unsigned int i = 0;
-					i < (unsigned int) _pllPartitions->numberOfPartitions;
+					i < (unsigned int) _alignment.getNumberOfPartitions();
 					i++) {
 				if (_partitionNumber != i && !isMissingBranch(node, i)) {
-					sumWgt += _pllPartitions->partitionData[i]->width;
+					sumWgt += _alignment.getSequenceLength(i);
 				}
 			}
 
 			/* add to scaler only if there is info in other partitions */
 			if (sumWgt > 0) {
 
-				double branchLength = pllGetBranchLength(_pllTree, _pllPartitions, node, (int)_partitionNumber);
+				double branchLength = pllGetBranchLength(_tree, _partition, node, (int)_partitionNumber);
 
 				/* compute the current weighted branch length ratio */
 				double sumFactors = 0.0;
 				for (unsigned int i = 0;
-						i < (unsigned int) _pllPartitions->numberOfPartitions;
+						i < (unsigned int) _alignment.getNumberOfPartitions();
 						i++) {
 					if (_partitionNumber != i && !isMissingBranch(node, i)) {
-						double curBranchLength = pllGetBranchLength(_pllTree, _pllPartitions, node, (int)i);
+						double curBranchLength = pllGetBranchLength(_tree, _partition, node, (int)i);
 						double factor =
-								(double) _pllPartitions->partitionData[i]->width
+								(double) _alignment.getSequenceLength(i)
 										/ (double) sumWgt;
 						sumFactors += factor;
 						double r = branchLength / curBranchLength;
@@ -475,7 +480,7 @@ void Predictor::getBranches(nodeptr node, int depth, double * cumWeight, vector<
 				ratio = branchLength / localSum;
 
 				stringstream ss;
-				ss << "(" << node->number << "," << node->back->number << ")";
+				ss << "(" << node->clv_index << "," << node->back->clv_index << ")";
 				cout << setw(10) << right << ss.str() << " - weight: "
 						<< curWeight << " ratio: " << ratio << endl;
 
@@ -489,7 +494,7 @@ void Predictor::getBranches(nodeptr node, int depth, double * cumWeight, vector<
 			}
 		}
 
-		if ((unsigned int) node->number > numberOfTaxa) {
+		if ((unsigned int) node->clv_index > numberOfTaxa) {
 			/* inspect children */
 			double child1W = 0.0, child2W = 0.0;
 			getBranches(node->next->back, depth+1, &child1W, branches);
@@ -500,7 +505,7 @@ void Predictor::getBranches(nodeptr node, int depth, double * cumWeight, vector<
 	}
 }
 
-double Predictor::getSumBranches(nodeptr node, int depth, double * weight) const {
+double Predictor::getSumBranches(pll_utree_t * node, int depth, double * weight) const {
 
 	double childrenSum = 0.0, localSum = 0.0, ratio = 0.0;
 
@@ -516,30 +521,30 @@ double Predictor::getSumBranches(nodeptr node, int depth, double * weight) const
 		if (!isMissingBranch(node, _partitionNumber)) {
 
 			for (unsigned int i = 0;
-					i < (unsigned int) _pllPartitions->numberOfPartitions;
+					i < (unsigned int) _alignment.getNumberOfPartitions();
 					i++) {
 				if (_partitionNumber != i && !isMissingBranch(node, i)) {
-					sumWgt += _pllPartitions->partitionData[i]->width;
+					sumWgt += _alignment.getSequenceLength(i);
 				}
 			}
 
 			/* add to scaler only if there is info in other partitions */
 			if (sumWgt > 0) {
 
-				double branchLength = pllGetBranchLength(_pllTree, _pllPartitions, node,
+				double branchLength = pllGetBranchLength(_tree, _partition, node,
 						(int) _partitionNumber);
 
 				/* compute the current weighted branch length ratio */
 				double sumFactors = 0.0;
 				for (unsigned int i = 0;
-						i < (unsigned int) _pllPartitions->numberOfPartitions;
+						i < (unsigned int) _alignment.getNumberOfPartitions();
 						i++) {
 
 					if (_partitionNumber != i && !isMissingBranch(node, i)) {
 
-						double curBranchLength = pllGetBranchLength(_pllTree, _pllPartitions, node, (int)i);
+						double curBranchLength = pllGetBranchLength(_tree, _partition, node, (int)i);
 						double factor =
-								(double) _pllPartitions->partitionData[i]->width
+								(double) _alignment.getSequenceLength(i)
 										/ (double) sumWgt;
 						sumFactors += factor;
 //						double r = branchLength / curBranchLength;
@@ -560,7 +565,7 @@ double Predictor::getSumBranches(nodeptr node, int depth, double * weight) const
 				ratio = branchLength / localSum;
 
 				stringstream ss;
-				ss << "(" << node->number << "," << node->back->number << ")";
+				ss << "(" << node->clv_index << "," << node->back->clv_index << ")";
 				cout << setw(10) << right << ss.str() << setprecision(6)
 						<< " - weight: " << distanceWeight << " ratio: "
 						<< ratio << endl;
@@ -568,7 +573,7 @@ double Predictor::getSumBranches(nodeptr node, int depth, double * weight) const
 			}
 		}
 
-		if ((unsigned int) node->number > numberOfTaxa) {
+		if ((unsigned int) node->clv_index > numberOfTaxa) {
 			/* inspect children */
 			double child1W = 0.0, child2W = 0.0;
 			childrenSum += getSumBranches(node->next->back, depth+1, &child1W);
@@ -590,7 +595,7 @@ double Predictor::getSumBranches(nodeptr node, int depth, double * weight) const
 //	if (_missingSubtreesAncestors.size()) {
 //
 //		/* traverse the tree starting at one arbitrary ancestor node */
-//		nodeptr startingNode = _missingSubtreesAncestors[0];
+//		pll_utree_t * startingNode = _missingSubtreesAncestors[0];
 //
 //		cout << "Branch length scaler:" << endl;
 //		double cumWeight = 0;
@@ -602,24 +607,24 @@ double Predictor::getSumBranches(nodeptr node, int depth, double * weight) const
 //	return scaler;
 //}
 
-void Predictor::stealBranchRecursive(const nodeptr node) {
+void Predictor::stealBranchRecursive(const pll_utree_t * node) {
 	computeBranchLength(node);
 
-	if (node->number > _pllTree->mxtips) {
+	if (node->clv_index > _tree->mxtips) {
 		stealBranchRecursive(node->next->back);
 		stealBranchRecursive(node->next->next->back);
 	} else {
 		/* remove visited taxon */
 		_missingSequences.erase(
 				remove(_missingSequences.begin(), _missingSequences.end(),
-						node->number), _missingSequences.end());
+						node->clv_index), _missingSequences.end());
 	}
 }
 
-void Predictor::evolveNode(const nodeptr node, const double * ancestralProbabilities, double * ancestralPMatrix) {
+void Predictor::evolveNode(const pll_utree_t * node, const double * ancestralProbabilities, double * ancestralPMatrix) {
 
 #ifdef PRINT_TRACE
-	cout << "TRACE: Mutating node " << node->number << endl;
+	cout << "TRACE: Mutating node " << node->clv_index << endl;
 #endif
 #ifdef PRINT_ANCESTRAL
 	if (ancestralSequence) {
@@ -630,11 +635,11 @@ void Predictor::evolveNode(const nodeptr node, const double * ancestralProbabili
 	unsigned int n = _partitionLength;
 	double branchLength = computeBranchLength(node);
 	cout << "  - Estimated branch length for node " << setprecision(5)
-			<< node->number << " (partition "
-			<< _pllPartitions->partitionData[_partitionNumber]->partitionName
+			<< node->clv_index << " (partition "
+			<< _partitionNumber
 			<< ") = " << branchLength << endl;
 
-	if (node->number > _pllTree->mxtips) {
+	if (node->clv_index > _tree->mxtips) {
 
 		double * currentPMatrix = (double *) Utils::allocate(
 				(size_t) (numberOfRateCategories * _numberOfStates
@@ -743,9 +748,11 @@ void Predictor::evolveNode(const nodeptr node, const double * ancestralProbabili
 		free(ancestralSequence);
 
 		/* set the new sequence */
-		memcpy(&(_pllAlignment->sequenceData[seqIndexTranslate[node->number]][_start]), currentSequence, _partitionLength);
+		//TODO: Use setter!
+		//memcpy(&(_pllAlignment->sequenceData[seqIndexTranslate[node->clv_index]][_start]), currentSequence, _partitionLength);
+
 		/* remove visited taxon */
-		_missingSequences.erase(remove(_missingSequences.begin(), _missingSequences.end(), node->number), _missingSequences.end());
+		_missingSequences.erase(remove(_missingSequences.begin(), _missingSequences.end(), node->clv_index), _missingSequences.end());
 
 		free(currentSequence);
 		free(currentProbabilities);
@@ -755,10 +762,6 @@ void Predictor::evolveNode(const nodeptr node, const double * ancestralProbabili
 void Predictor::mutatePMatrix(double * currentPMatrix,
 		double * ancestralPMatrix, double branchLength) {
 
-	double * gammaRates = (double *) alloca (numberOfRateCategories * sizeof(double));
-
-	pllMakeGammaCats(_pllPartitions->partitionData[_partitionNumber]->alpha, gammaRates, (int)numberOfRateCategories, false);
-
 	/* construct and validate P matrix */
 	double * matrix = (double *) Utils::allocate(
 			(size_t) numberOfRateCategories * _numberOfStates * _numberOfStates,
@@ -767,7 +770,7 @@ void Predictor::mutatePMatrix(double * currentPMatrix,
 	for (unsigned int i = 0; i < numberOfRateCategories; i++) {
 		_currentModel->setMatrix(
 				&(matrix[i * _numberOfStates * _numberOfStates]),
-				gammaRates[i] * branchLength, false);
+				_partition->rates[i] * branchLength, false);
 
 		/* validation */
 		for (unsigned int j = 0; j < _numberOfStates; j++) {
@@ -806,10 +809,10 @@ void Predictor::mutatePMatrix(double * currentPMatrix,
 	free(matrix);
 }
 
-void Predictor::evolveNode(const nodeptr node, const char * ancestralSequence) {
+void Predictor::evolveNode(const pll_utree_t * node, const char * ancestralSequence) {
 
 #ifdef PRINT_TRACE
-	cout << "TRACE: Mutating node " << node->number << endl;
+	cout << "TRACE: Mutating node " << node->clv_index << endl;
 #endif
 #ifdef PRINT_ANCESTRAL
 	if (ancestralSequence) {
@@ -819,23 +822,25 @@ void Predictor::evolveNode(const nodeptr node, const char * ancestralSequence) {
 #endif
 
 	double branchLength = computeBranchLength(node);
-	cout << "  - Estimated branch length for node " << setprecision(5) << node->number << " (partition " << _pllPartitions->partitionData[_partitionNumber]->partitionName << ") = " << branchLength << endl;
+	cout << "  - Estimated branch length for node " << setprecision(5) << node->clv_index << " (partition " << _partitionNumber << ") = " << branchLength << endl;
 
 	char * currentSequence = (char *) malloc(strlen(ancestralSequence) + 1);
 	mutateSequence(currentSequence, ancestralSequence, branchLength);
 
-	if (node->number > _pllTree->mxtips) {
+	if (node->clv_index > _tree->mxtips) {
 #ifdef PRINT_TRACE
 		cout << "TRACE: Recurse for Mutating node " << node->next->back->number
-				<< " and " << node->next->next->back->number << endl;
+				<< " and " << node->next->next->back->clv_index << endl;
 #endif
 		evolveNode(node->next->back, currentSequence);
 		evolveNode(node->next->next->back, currentSequence);
 	} else {
 		/* set the new sequence */
-		memcpy(&(_pllAlignment->sequenceData[seqIndexTranslate[node->number]][_start]), currentSequence, _partitionLength);
+		//TODO: Use setter!
+		//memcpy(&(_pllAlignment->sequenceData[seqIndexTranslate[node->clv_index]][_start]), currentSequence, _partitionLength);
+		//
 		/* remove visited taxon */
-		_missingSequences.erase(remove(_missingSequences.begin(), _missingSequences.end(), node->number), _missingSequences.end());
+		_missingSequences.erase(remove(_missingSequences.begin(), _missingSequences.end(), node->clv_index), _missingSequences.end());
 	}
 	free(currentSequence);
 }
@@ -845,16 +850,12 @@ void Predictor::getRootingNodes() {
 
 
 #ifdef DEBUG_BRANCHES
-	pllTreeToNewick(_pllTree->tree_string, _pllTree, _pllPartitions,
-				_pllTree->start->back, false, true, true, false, false,
-				PLL_SUMMARIZE_LH, false, false);
-
-		cout << _pllTree->tree_string << endl;
+		cout << pll_utree_export_newick(_tree) << endl;
 		for (int i = 0; i < _missingBranches->size(); i++) {
 			cout << "PARTITION " << i << "/" << _missingBranches->size() << endl;
 			cout << "  Branches: " << _missingBranches->at(i).size() << endl;
 			for (int j = 0; j < _missingBranches->at(i).size(); j++) {
-				cout << "    * " << _missingBranches->at(i)[j]->number << endl;
+				cout << "    * " << _missingBranches->at(i)[j]->clv_index << endl;
 			}
 		}
 #endif
@@ -864,15 +865,15 @@ void Predictor::getRootingNodes() {
 		for (i = 0;
 				i < _missingBranches->at(_partitionNumber).size()
 						&& _missingBranches->at(_partitionNumber)[i]->number
-								<= _pllTree->mxtips; i++)
+								<= _tree->mxtips; i++)
 			;
 
-		nodeptr currentNode = _missingBranches->at(_partitionNumber)[i++];
+		pll_utree_t * currentNode = _missingBranches->at(_partitionNumber)[i++];
 		int counter = 0;
 		for ( ; i<_missingBranches->at(_partitionNumber).size(); i++) {
 			int testNode = _missingBranches->at(_partitionNumber)[i]->number;
-			assert ( testNode >=  currentNode->number );
-			if ( testNode == currentNode->number ) {
+			assert ( testNode >=  currentNode->clv_index );
+			if ( testNode == currentNode->clv_index ) {
 				counter++;
 			} else {
 				/* each node should appear either 1 or 3 times */
@@ -894,7 +895,7 @@ void Predictor::getRootingNodes() {
 	}
 }
 
-void Predictor::predictMissingSequences( const pllAlignmentData * originalSequence ) {
+void Predictor::predictMissingSequences( void ) {
 
 #ifdef PRINT_TRACE
 	for (size_t i = 0; i < _missingSequences.size(); i++) {
@@ -903,9 +904,9 @@ void Predictor::predictMissingSequences( const pllAlignmentData * originalSequen
 #endif
 
 	vector<unsigned int> missingSequencesCopy;
-	if (originalSequence) {
-		missingSequencesCopy = _missingSequences;
-	}
+	// if (originalSequence) {
+	// 	missingSequencesCopy = _missingSequences;
+	// }
 
 	getRootingNodes();
 
@@ -914,7 +915,7 @@ void Predictor::predictMissingSequences( const pllAlignmentData * originalSequen
 			/* compute branch length scaler */
 			if (_missingSubtreesAncestors.size()) {
 				/* traverse the tree starting at one arbitrary ancestor node */
-				nodeptr startingNode = _missingSubtreesAncestors[0];
+				pll_utree_t * startingNode = _missingSubtreesAncestors[0];
 
 				cout << "Branch length scaler:" << endl;
 				double cumWeight = 0.0, weight = 0.0;
@@ -935,7 +936,7 @@ void Predictor::predictMissingSequences( const pllAlignmentData * originalSequen
 			cout << "Applying branch length scaler " << _branchLengthScaler << endl << endl;
 		} else if (branchLengthsMode == BL_DRAW) {
 			/* traverse the tree starting at one arbitrary ancestor node */
-			nodeptr startingNode = _missingSubtreesAncestors[0];
+			pll_utree_t * startingNode = _missingSubtreesAncestors[0];
 
 			cout << "Branch length scaler:" << endl;
 			double cumWeight = 0.0;
@@ -957,16 +958,16 @@ void Predictor::predictMissingSequences( const pllAlignmentData * originalSequen
 	while (_missingSequences.size()) {
 		cout << "Predicting subtree" << endl;
 		assert(nextAncestor < _missingSubtreesAncestors.size());
-		nodeptr ancestor = _missingSubtreesAncestors[nextAncestor++];
+		pll_utree_t * ancestor = _missingSubtreesAncestors[nextAncestor++];
 
-		nodeptr startNode = ancestor;
+		pll_utree_t * startNode = ancestor;
 
 #ifdef PRINT_TRACE
-		cout << "TRACE: Updating partials for " << startNode->number << endl;
+		cout << "TRACE: Updating partials for " << startNode->clv_index << endl;
 #endif
-		pllUpdatePartialsAncestral(_pllTree, _pllPartitions, startNode, false);
+		pllUpdatePartialsAncestral(_tree, _partition, startNode, false);
 #ifdef PRINT_TRACE
-		cout << "TRACE: Generating ancestral for " << startNode->number << endl;
+		cout << "TRACE: Generating ancestral for " << startNode->clv_index << endl;
 #endif
 
 		/*
@@ -974,20 +975,20 @@ void Predictor::predictMissingSequences( const pllAlignmentData * originalSequen
 		 * This is necessary in case there are mixed protein-dna partitions.
 		 */
 		int probsSize = 0;
-		for (int i = 0; i < _pllPartitions->numberOfPartitions; i++) {
-			probsSize = max(_pllPartitions->partitionData[i]->states,
+		for (int i = 0; i < _alignment.getNumberOfPartitions(); i++) {
+			probsSize = max(_partition->states,
 					probsSize);
 		}
 		probsSize *= sequenceLength;
 
 		char * ancestral = (char *) malloc((size_t) sequenceLength + 1);
 		double * probs = (double *) malloc((size_t) probsSize * sizeof(double));
-		pllGetAncestralState(_pllTree, _pllPartitions, startNode, probs,
+		pllGetAncestralState(_tree, _partition, startNode, probs,
 				ancestral, false);
 
 #ifdef DEBUG
-		printNodes(_pllTree, _pllPartitions);
-		printBranchLengths(_pllTree, _pllPartitions);
+		printNodes(_tree, _partition);
+		printBranchLengths(_tree, _partition);
 #endif
 
 		switch (predictionMode) {
@@ -1030,34 +1031,35 @@ void Predictor::predictMissingSequences( const pllAlignmentData * originalSequen
 			break;
 		}
 
-		if (originalSequence) {
-			/* compute similarity */
-			_seqSimilarity = 0.0;
-			for (size_t i = 0; i < missingSequencesCopy.size(); i++) {
-				unsigned int seq = missingSequencesCopy[i];
-				double simCount = 0.0;
-				unsigned int seqLen = 0;
-				if (Utils::getDataType(_pllPartitions, _partitionNumber)
-						== DT_NUCLEIC) {
-					for (size_t j = _start; j < _end; j++) {
-						bool validForComp;
-						simCount +=
-								Utils::compareNucStates(
-										_pllAlignment->sequenceData[seqIndexTranslate[seq]][j],
-										originalSequence->sequenceData[seqIndexTranslate[seq]][j],
-										&validForComp);
-						seqLen += validForComp;
-					}
-					cout << "Comparing sequence " << taxaNames[seq] << ": "
-							<< simCount << " valid sites." << endl;
-					_seqSimilarity += simCount / seqLen
-							/ missingSequencesCopy.size();
-				}
-				cout << "Similarity in sequence " << seq << "/"
-						<< _pllPartitions->partitionData[_partitionNumber]->partitionName
-						<< ": " << 100 * simCount / seqLen << "%" << endl;
-			}
-		}
+		// TODO:
+		// if (originalSequence) {
+		// 	/* compute similarity */
+		// 	_seqSimilarity = 0.0;
+		// 	for (size_t i = 0; i < missingSequencesCopy.size(); i++) {
+		// 		unsigned int seq = missingSequencesCopy[i];
+		// 		double simCount = 0.0;
+		// 		unsigned int seqLen = 0;
+		// 		if (_alignment.getDataType(_partitionNumber)
+		// 				== DT_NUCLEIC) {
+		// 			for (size_t j = _start; j < _end; j++) {
+		// 				bool validForComp;
+		// 				simCount +=
+		// 						Utils::compareNucStates(
+		// 								_pllAlignment->sequenceData[seqIndexTranslate[seq]][j],
+		// 								originalSequence->sequenceData[seqIndexTranslate[seq]][j],
+		// 								&validForComp);
+		// 				seqLen += validForComp;
+		// 			}
+		// 			cout << "Comparing sequence " << taxaNames[seq] << ": "
+		// 					<< simCount << " valid sites." << endl;
+		// 			_seqSimilarity += simCount / seqLen
+		// 					/ missingSequencesCopy.size();
+		// 		}
+		// 		cout << "Similarity in sequence " << seq << "/"
+		// 				<< _partition->partitionData[_partitionNumber]->partitionName
+		// 				<< ": " << 100 * simCount / seqLen << "%" << endl;
+		// 	}
+		// }
 	}
 
 	/* ensure there is no subtree left */
@@ -1065,32 +1067,33 @@ void Predictor::predictMissingSequences( const pllAlignmentData * originalSequen
 
 	cout << "Tree with stolen branches for partition " << _partitionNumber
 			<< ":" << endl;
-	pllTreeToNewick(_pllTree->tree_string, _pllTree, _pllPartitions,
-			_pllTree->start->back, true, true, true, false, false,
-			_partitionNumber, false, false);
-	cout << _pllTree->tree_string << endl;
+	cout << pll_utree_export_newick(_tree) << endl;
 }
 
 void Predictor::predictAllSequences( void ) {
 
 	_missingSequences.resize(1);
-	for (unsigned int taxon=1; taxon <= numberOfTaxa; taxon++) {
+
+	//TODO: Extract tip nodes
+	pll_utree_t ** tipNodes;
+
+	for (unsigned int taxon=0; taxon < numberOfTaxa; taxon++) {
 		_missingSequences[0] = taxon;
-		nodeptr ancestor = _pllTree->nodep[taxon]->back;
+		pll_utree_t * ancestor = tipNodes[taxon]->back;
 		/*
 		 * Compute probs size according to the maximum number of states.
 		 * This is necessary in case there are mixed protein-dna partitions.
 		 */
 		int probsSize = 0;
-		for (int i = 0; i < _pllPartitions->numberOfPartitions; i++) {
-			probsSize = max(_pllPartitions->partitionData[i]->states,
+		for (int i = 0; i < _alignment.getNumberOfPartitions(); i++) {
+			probsSize = max(_partition->states,
 					probsSize);
 		}
 		probsSize *= sequenceLength;
 		char * ancestral = (char *) malloc( (size_t) sequenceLength + 1);
 		double * probs = (double *) malloc(
 				(size_t) probsSize * sizeof(double));
-		pllGetAncestralState(_pllTree, _pllPartitions, ancestor, probs, ancestral, false);
+		pllGetAncestralState(_tree, _partition, ancestor, probs, ancestral, false);
 		free (probs);
 
 		/* extract the ancestral for the partition */

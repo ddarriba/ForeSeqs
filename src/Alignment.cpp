@@ -62,7 +62,7 @@ static int lex_table[ASCII_SIZE] = {
 
 namespace foreseqs {
 
-  Alignment::Alignment(const & string filename)
+  Alignment::Alignment(const string & filename)
   {
     msa = pll_phylip_parse_msa(filename.c_str(),
                                &sequenceLength);
@@ -74,7 +74,7 @@ namespace foreseqs {
       pll_msa_destroy(msa);
   }
 
-  int Alignment::loadPartitionsFile(const & string filename)
+  int Alignment::loadPartitionsFile(const string & filename)
   {
     return PLL_SUCCESS;
   }
@@ -84,8 +84,32 @@ namespace foreseqs {
     return sequenceCount;
   }
 
-  unsigned int Alignment::getSequenceLength( void ) const
+  unsigned int Alignment::getSequenceLength( int partId = -1 ) const
   {
-    return sequenceLength;
+    if (partId >= 0)
+      return partitionDescriptors[partId].end - partitionDescriptors[partId].start + 1;
+    else
+      return sequenceLength;
+  }
+
+  unsigned int Alignment::getStartPosition( int partId = -1 ) const
+  {
+    if (partId >= 0)
+      return partitionDescriptors[partId].start;
+    else
+      return 0;
+  }
+
+  unsigned int Alignment::getEndPosition( int partId = -1 ) const
+  {
+    if (partId >= 0)
+      return partitionDescriptors[partId].end;
+    else
+      return sequenceLength;
+  }
+
+  DataType Alignment::getDataType(int partId) const
+  {
+    return partitionDescriptors[partId].dataType;
   }
 }

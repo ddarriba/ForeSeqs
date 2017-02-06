@@ -32,13 +32,15 @@ using namespace std;
 
 namespace foreseqs {
 
-Model::Model(partitionList * pllPartitions, size_t partitionIndex) :
-		_pllPartitionInfo(pllPartitions->partitionData[partitionIndex]),
+Model::Model(pll_partition_t * partition) :
+	  _partition(partition),
+		_numberOfStates(partition->states),
 		_frequencies(), _substRates(), _charStates(), _statesToIntMap() {
 }
 
 Model::Model(const Model& other) :
-		_pllPartitionInfo(other._pllPartitionInfo),
+	  _partition(other._partition)
+		_numberOfStates(other._numberOfStates),
 		_frequencies(other._frequencies), _substRates(other._substRates),
 		_charStates(other._charStates), _statesToIntMap(other._statesToIntMap) {
 
@@ -49,7 +51,11 @@ Model::~Model() {
 }
 
 Model& Model::operator=(const Model& other) {
-	_pllPartitionInfo = other._pllPartitionInfo;
+	_partition = other._partition;
+	_numberOfStates = other._numberOfStates;
+
+	assert(_partition->states = _numberOfStates);
+	
 	_frequencies = other._frequencies;
 	_substRates = other._substRates;
 	_charStates = other._charStates;
@@ -59,7 +65,7 @@ Model& Model::operator=(const Model& other) {
 
 double Model::computeFracchange( void ) const {
 
-	unsigned int numberOfStates = (unsigned int)_pllPartitionInfo->states;
+	unsigned int numberOfStates = _numberOfStates;
 	assert (numberOfStates == _frequencies.size());
 	assert ((numberOfStates * (numberOfStates-1))/2 == _substRates.size());
 

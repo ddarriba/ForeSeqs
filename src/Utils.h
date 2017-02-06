@@ -24,10 +24,7 @@
 #ifndef UTILS_H_
 #define UTILS_H_
 
-#ifndef _LIBPLL
-#define _LIBPLL
-#include "libpll/pll.h"
-#endif
+#include "PllDefs.h"
 
 #include <vector>
 #include <iostream>
@@ -82,7 +79,7 @@ public:
 	 *
 	 * @return true, if the file exists
 	 */
-	static inline bool existsFile(const std::string& filename) {
+	static bool existsFile(const std::string& filename) {
 		if (FILE *file = fopen(filename.c_str(), "r")) {
 			fclose(file);
 			return true;
@@ -126,17 +123,8 @@ public:
 	/**
 	 * @brief Multiply A x B matrices
 	 */
-	static void matrixMultiply(size_t columns, size_t rows, const double * A, double * B, double * result);
-
-	/**
-	 * @brief Gets the data type (NT or AA) according to the number of states
-	 *
-	 * @param[in] pllPartitions The PLL partition list
-	 * @param numberOfPartition The number of partition for checking the data type
-	 *
-	 * @return the data type (DT_NUCLEIC or DT_PROTEIC)
-	 */
-	static DataType getDataType(const partitionList * pllPartitions, size_t numberOfPartition);
+	static void matrixMultiply(size_t columns, size_t rows,
+		                         const double * A, double * B, double * result);
 
 	/**
 	 * @brief Compare 2 nucleotide states
@@ -155,20 +143,22 @@ public:
 	 *
 	 * @return The list of missing sequences in the tree
 	 */
-	static std::vector< std::vector<unsigned int> > findMissingSequences ( pllInstance * pllTree, partitionList * pllPartitions );
+	static std::vector< std::vector<unsigned int> > findMissingSequences ( pll_partition_t * partitions, size_t numberOfPartitions );
 
 	/**
 	 * @brief Return the rooting node for a missing branch
 	 *
-	 * @param[in] pllTree The tree instance
+	 * @param[in] tree The missing branch for start searching
 	 * @param[in,out] missingSequences The list of missing sequences. Those in the missing subtree are removed
-	 * @param[in] startingNode The missing branch for start searching
 	 * @param[out] missingBranches The list of missing branches in the missing subtree
+	 * @param[in] numberOfTips The number of tip nodes in the tree
 	 *
 	 * @return The rooting node
 	 */
-	static nodeptr findRootingNode( pllInstance * pllTree, std::vector<unsigned int> * missingSequences,
-		nodeptr startingNode, std::vector<nodeptr> * missingBranches );
+	static pll_utree_t * findRootingNode( pll_utree_t * tree,
+		                                    std::vector<unsigned int> * missingSequences,
+																        std::vector<pll_utree_t *> * missingBranches,
+															      	  size_t numberOfTips );
 
 	/**
 	 * @brief Get the list of missing branches for every partition
@@ -178,8 +168,11 @@ public:
 	 *
 	 * @return The list of missing branches in the tree
 	 */
-	static std::vector< std::vector<nodeptr> > findMissingBranches ( pllInstance * pllTree,
-		partitionList * pllPartitions, std::vector< std::vector<unsigned int> > missingSequences );
+	static std::vector< std::vector<pll_utree_t *> > findMissingBranches (
+											pll_utree_t ** tipNodes,
+											std::vector< std::vector<unsigned int> > missingSequences,
+											size_t numberOfTips,
+											size_t numberOfPartitions );
 
 	/**
 	 * @brief Optimizes the model parameters
@@ -187,7 +180,9 @@ public:
 	 * @param[in,out] pllTree The tree
 	 * @param[in,out] pllPartitions The partitions
 	 */
-	static void optimizeModelParameters(pllInstance * pllTree, partitionList * pllPartitions);
+	static void optimizeModelParameters(pll_partition_t ** partitions,
+																			pll_utree_t ** trees,
+																			size_t numberOfPartitions);
 
 	/**
 	 * @brief Allocate memory
@@ -210,8 +205,10 @@ private:
 	 *
 	 * @return The rooting node
 	 */
-	static bool subtreeIsMissing( pllInstance * pllTree, std::vector<unsigned int> * missingSequences,
-		const nodeptr node, std::vector<nodeptr> * missingBranches );
+	static bool subtreeIsMissing( const pll_utree_t * node,
+		                            std::vector<unsigned int> * missingSequences,
+																std::vector<pll_utree_t> * missingBranches,
+																size_t numberOfTips );
 
 	/**
 	 * @brief Transposes a matrix
