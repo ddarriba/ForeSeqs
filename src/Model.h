@@ -24,7 +24,10 @@
 #ifndef MODEL_H_
 #define MODEL_H_
 
-#include "pll/pll.h"
+#ifndef _LIBPLL
+#define _LIBPLL
+#include "libpll/pll.h"
+#endif
 
 #include <map>
 #include <vector>

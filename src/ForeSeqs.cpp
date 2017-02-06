@@ -23,9 +23,13 @@
 
 #include "Predictor.h"
 #include "Utils.h"
+#include "Alignment.h"
 
 #include "config.h"
-#include "pll/pll.h"
+#ifndef _LIBPLL
+#define _LIBPLL
+#include "libpll/pll.h"
+#endif
 
 #include <iostream>
 #include <iomanip>
@@ -116,15 +120,14 @@ int main(int argc, char * argv[]) {
 
 	time_t startTime, currentTime;
 
-	pllQueue * pllPartsQueue = 0;
-	pllInstance * pllTree = 0;
-	partitionList * pllPartitions = 0;
-	pllAlignmentData * pllAlignment = 0;
+	pll_utree_t * pllTree = 0;
+	pll_partition_t * pllPartition = 0;
+	Alignment * alignment = 0;
 	string inputfile, treefile, partitionsfile, outputfile;
 	foreseqs::numberOfThreads = 1;
 #if(TEST_SIM)
 	string originalfile;
-	pllAlignmentData * originalAlignment = 0;
+	Alignment * originalAlignment = 0;
 	bool originalFileDefined = false;
 #endif
 	unsigned int randomNumberSeed = DEFAULT_RANDOM_SEED;
@@ -320,13 +323,15 @@ int main(int argc, char * argv[]) {
 		exit(EX_IOERR);
 	}
 
-	pllAlignment = pllParseAlignmentFile(PLL_FORMAT_PHYLIP, inputfile.c_str());
-	if (!pllAlignment) {
-		cerr << "[ERROR] There was an error parsing input data." << endl;
-		exit(EX_IOERR);
-	}
-	foreseqs::numberOfTaxa = (unsigned int) pllAlignment->sequenceCount;
-	foreseqs::sequenceLength = (unsigned int) pllAlignment->sequenceLength;
+	//TODO: try-catch
+	alignment = new Alignment(inputfile);
+	// if (!alignment) {
+	// 	cerr << "[ERROR] There was an error parsing input data." << endl;
+	// 	exit(EX_IOERR);
+	// }
+
+	foreseqs::numberOfTaxa = (unsigned int) alignment->getSequenceCount();
+	foreseqs::sequenceLength = (unsigned int) alignment->getSequenceLength();
 
 	if (!foreseqs::predictSequences) {
 		if (numberOfReplicates != 1) {
@@ -348,26 +353,26 @@ int main(int argc, char * argv[]) {
 	}
 
 	if (originalFileDefined) {
-		originalAlignment = pllParseAlignmentFile(PLL_FORMAT_PHYLIP,
-				originalfile.c_str());
-		if (!originalAlignment) {
-			cerr
-					<< "[ERROR] There was an error parsing original alignment data."
-					<< endl;
-			exit(EX_IOERR);
-		}
+		//TODO: try-catch
+		originalAlignment = new Alignment(originalfile);
+		// if (!originalAlignment) {
+		// 	cerr
+		// 			<< "[ERROR] There was an error parsing original alignment data."
+		// 			<< endl;
+		// 	exit(EX_IOERR);
+		// }
 		if (foreseqs::numberOfTaxa
-				!= (unsigned int) originalAlignment->sequenceCount) {
+				!= (unsigned int) originalAlignment->getSequenceCount()) {
 			cerr << "[ERROR] Number of taxa in the original alignment ("
-					<< originalAlignment->sequenceCount
+					<< originalAlignment->getSequenceCount()
 					<< ") does not match the input file ("
 					<< foreseqs::numberOfTaxa << ")." << endl;
 			exit(EX_IOERR);
 		}
 		if (foreseqs::sequenceLength
-				!= (unsigned int) originalAlignment->sequenceLength) {
+				!= (unsigned int) originalAlignment->getSequenceLength()) {
 			cerr << "[ERROR] Sequence length in the original alignment ("
-					<< originalAlignment->sequenceLength
+					<< originalAlignment->getSequenceLength()
 					<< ") does not match the input file ("
 					<< foreseqs::sequenceLength << ")." << endl;
 			exit(EX_IOERR);
@@ -377,28 +382,12 @@ int main(int argc, char * argv[]) {
 
 	if (partitionsFileDefined) {
 		/* Create partitions */
-		pllPartsQueue = pllPartitionParse(partitionsfile.c_str());
-		if (!pllPartitionsValidate(pllPartsQueue, pllAlignment)) {
+		if (!alignment->loadPartitionsFile(partitionsfile)) {
 			cerr
-					<< "[ERROR] There was an error with the partitions description."
+					<< "[ERROR] There was an error parsing partitions data."
 					<< endl;
 			exit(EX_IOERR);
 		}
-	} else {
-		/* Set one single partition */
-		char partitionString[20];
-		sprintf(partitionString, "DNA, P0 = 1-%d",
-				pllAlignment->sequenceLength);
-		pllPartsQueue = pllPartitionParseString(partitionString);
-		assert(pllPartitionsValidate(pllPartsQueue, pllAlignment));
-	}
-
-	pllPartitions = pllPartitionsCommit(pllPartsQueue, pllAlignment);
-	pllQueuePartitionsDestroy(&pllPartsQueue);
-
-	if (!pllPartitions) {
-		cerr << "[ERROR] There was an error parsing partitions data." << endl;
-		exit(EX_IOERR);
 	}
 
 	/* Initialization done */
@@ -469,35 +458,17 @@ int main(int argc, char * argv[]) {
 				<< "WARNING: There is only one partition." << endl
 				<< "         Branch lengths are taken from the input tree." << endl
 				<< setfill('*') << setw(54) << "" << setfill(' ') << endl;
-	} else {
-		pllPartitions->perGeneBranchLengths = PLL_TRUE; /* IMPORTANT!! */
 	}
 
 	/* Start! */
 	startTime = time(NULL);
 
-	pllNewickTree * nt;
-	nt = pllNewickParseFile(treefile.c_str());
-	if (!nt) {
+	tree = pll_utree_parse_newick(treefile.c_str());
+	if (!tree) {
 		cerr << "[ERROR] There was an error parsing newick file " << treefile << endl;
 		return (EXIT_FAILURE);
 	}
-	if (!pllValidateNewick(nt))
-	{
-		cerr << "Invalid phylogenetic tree" << endl;
-		printf("%d\n", errno);
-		return (EX_IOERR);
-	}
 
-	cout << "Seting fixed topology " << endl;
-	pllTreeInitTopologyNewick(pllTree, nt, PLL_FALSE);
-	pllNewickParseDestroy(&nt);
-
-	cout << endl << "Loading alignment " << endl;
-	if (!pllLoadAlignment(pllTree, pllAlignment, pllPartitions)) {
-		cerr << "Error!" << endl;
-		exit(1);
-	}
 	foreseqs::taxaNames = pllTree->nameList;
 
 	/* build translation array */
@@ -651,4 +622,3 @@ int main(int argc, char * argv[]) {
 
 	return (EX_OK);
 }
-

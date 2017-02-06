@@ -24,7 +24,10 @@
 #ifndef UTILS_H_
 #define UTILS_H_
 
-#include "pll/pll.h"
+#ifndef _LIBPLL
+#define _LIBPLL
+#include "libpll/pll.h"
+#endif
 
 #include <vector>
 #include <iostream>
@@ -164,7 +167,7 @@ public:
 	 *
 	 * @return The rooting node
 	 */
-	static nodeptr findRootingNode( pllInstance * pllTree, std::vector<unsigned int> * missingSequences, 
+	static nodeptr findRootingNode( pllInstance * pllTree, std::vector<unsigned int> * missingSequences,
 		nodeptr startingNode, std::vector<nodeptr> * missingBranches );
 
 	/**
@@ -175,7 +178,7 @@ public:
 	 *
 	 * @return The list of missing branches in the tree
 	 */
-	static std::vector< std::vector<nodeptr> > findMissingBranches ( pllInstance * pllTree, 
+	static std::vector< std::vector<nodeptr> > findMissingBranches ( pllInstance * pllTree,
 		partitionList * pllPartitions, std::vector< std::vector<unsigned int> > missingSequences );
 
 	/**
@@ -207,7 +210,7 @@ private:
 	 *
 	 * @return The rooting node
 	 */
-	static boolean subtreeIsMissing( pllInstance * pllTree, std::vector<unsigned int> * missingSequences, 
+	static bool subtreeIsMissing( pllInstance * pllTree, std::vector<unsigned int> * missingSequences,
 		const nodeptr node, std::vector<nodeptr> * missingBranches );
 
 	/**

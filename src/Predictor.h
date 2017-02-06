@@ -24,8 +24,11 @@
 #ifndef PREDICTOR_H_
 #define PREDICTOR_H_
 
-#include "pll/pll.h"
 #include "Model.h"
+#ifndef _LIBPLL
+#define _LIBPLL
+#include "libpll/pll.h"
+#endif
 
 #include <map>
 #include <vector>

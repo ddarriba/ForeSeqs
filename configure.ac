@@ -1,9 +1,9 @@
 # Copyright (C) 2005 G. Hickey <hickey@cs.dal.ca>
-#  
+#
 # This file is free software; as a special exception the author gives
-# unlimited permission to copy and/or distribute it, with or without 
+# unlimited permission to copy and/or distribute it, with or without
 # modifications, as long as this notice is preserved.
-# 
+#
 # This program is distributed in the hope that it will be useful, but
 # WITHOUT ANY WARRANTY, to the extent permitted by law; without even the
 # implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
@@ -46,17 +46,15 @@ AC_CHECK_LIB([m], [main], [], [
 #   AC_MSG_ERROR([Could  not find OPENBLAS library])
 # ])
 
-#AC_CHECK_LIB([pthread], [pthread_create], [
-#    AC_CHECK_LIB([pll-avx-pthreads], [pllCreateInstance], [], [
-#        AC_CHECK_LIB([pll-sse3-pthreads], [pllCreateInstance], [] [
-#            AC_MSG_ERROR([Could  not find PLL library])
-#              ])])
-#], [
-#    AC_CHECK_LIB([pll-avx], [pllCreateInstance], [], [
-        AC_CHECK_LIB([pll-sse3], [pllCreateInstance], [], [
-            AC_MSG_ERROR([Could  not find PLL library])
+AC_CHECK_HEADERS([pll.h], [], [
+    AC_CHECK_HEADERS([libpll/pll.h], [
+      have_prefix=yes
+    ], [
+      AC_MSG_ERROR([pll.h not found])
+    ])])
+
+AC_CHECK_LIB([pll], [pll_partition_create], [], [
+  AC_MSG_ERROR([PLL library not found])
 ])
-#])
-#])
 
 AC_OUTPUT
