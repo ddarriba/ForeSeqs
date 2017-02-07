@@ -143,7 +143,7 @@ public:
 	 *
 	 * @return The list of missing sequences in the tree
 	 */
-	static std::vector< std::vector<unsigned int> > findMissingSequences ( pll_partition_t * partitions, size_t numberOfPartitions );
+	static std::vector< std::vector<unsigned int> > findMissingSequences ( pll_partition_t ** partitions, size_t numberOfPartitions );
 
 	/**
 	 * @brief Return the rooting node for a missing branch
@@ -205,9 +205,9 @@ private:
 	 *
 	 * @return The rooting node
 	 */
-	static bool subtreeIsMissing( const pll_utree_t * node,
+	static bool subtreeIsMissing( pll_utree_t * node,
 		                            std::vector<unsigned int> * missingSequences,
-																std::vector<pll_utree_t> * missingBranches,
+																std::vector<pll_utree_t *> * missingBranches,
 																size_t numberOfTips );
 
 	/**

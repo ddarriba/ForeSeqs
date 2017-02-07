@@ -21,45 +21,28 @@
  *  along with ForeSeqs.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef ALIGNMENT_H_
-#define ALIGNMENT_H_
+#ifndef PHYLO_H_
+#define PHYLO_H_
 
 #include "Utils.h"
+#include "Alignment.h"
+#include "PllDefs.h"
 
 #include <vector>
 #include <string>
 
 namespace foreseqs {
 
-typedef struct {
-  char * name;
-  DataType dataType;
-  int start;
-  int end;
-} PartitionDesc;
-
-class Alignment {
+class Phylo {
 public:
-  Alignment(const std::string & filename);
-  ~Alignment( void );
+  Phylo(Alignment & alignment,
+        pll_utree_t * tree);
+  ~Phylo( void );
 
-  int loadPartitionsFile(const std::string & filename);
-
-  unsigned int getSequenceCount( void ) const;
-  unsigned int getSequenceLength( int partId = -1 ) const;
-
-  char ** getLabels( void );
-  char * getSequence( unsigned int taxonId, int partId = 0 );
-
-  unsigned int getNumberOfPartitions( void ) { return partitionDescriptors.size(); }
-  unsigned int getStartPosition( int partId = -1 ) const;
-  unsigned int getEndPosition( int partId = -1 ) const;
-  DataType getDataType(int partId) const;
 private:
-  pll_msa_t * msa;
-  unsigned int sequenceCount;
-  unsigned int sequenceLength;
-  std::vector< PartitionDesc > partitionDescriptors;
+  Alignment & _alignment;
+  std::vector< pll_partition_t * > _partitions;
+  pll_utree_t * _tree;
 };
 
 } /* namespace foreseqs */

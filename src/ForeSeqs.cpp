@@ -21,9 +21,7 @@
  *  along with ForeSeqs.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "Predictor.h"
-#include "Utils.h"
-#include "Alignment.h"
+//#include "Predictor.h"
 
 #include "config.h"
 
@@ -38,6 +36,8 @@
 #include <time.h>
 
 #include "PllDefs.h"
+#include "Utils.h"
+#include "Alignment.h"
 
 using namespace std;
 
@@ -118,14 +118,13 @@ int main(int argc, char * argv[]) {
 
 	time_t startTime, currentTime;
 
-	pll_utree_t * pllTree = 0;
-	pll_partition_t * pllPartition = 0;
-	Alignment * alignment = 0;
+	pll_utree_t * tree = 0;
+	foreseqs::Alignment * alignment = 0;
 	string inputfile, treefile, partitionsfile, outputfile;
 	foreseqs::numberOfThreads = 1;
 #if(TEST_SIM)
 	string originalfile;
-	Alignment * originalAlignment = 0;
+	foreseqs::Alignment * originalAlignment = 0;
 	bool originalFileDefined = false;
 #endif
 	unsigned int randomNumberSeed = DEFAULT_RANDOM_SEED;
@@ -282,17 +281,6 @@ int main(int argc, char * argv[]) {
 		}
 	}
 
-	{
-		pllInstanceAttr pllInstanceAttr;
-		pllInstanceAttr.fastScaling = PLL_FALSE;
-		pllInstanceAttr.randomNumberSeed = randomNumberSeed;
-		pllInstanceAttr.rateHetModel = PLL_GAMMA;
-		pllInstanceAttr.saveMemory = PLL_FALSE;
-		pllInstanceAttr.useRecom = PLL_FALSE;
-		pllInstanceAttr.numberOfThreads = foreseqs::numberOfThreads;
-		pllTree = pllCreateInstance(&pllInstanceAttr);
-	}
-
 	if (!foreseqs::Utils::existsFile(inputfile)) {
 		cerr << "[ERROR] Input alignment (" << inputfile << ") does not exist."
 				<< endl;
@@ -322,7 +310,7 @@ int main(int argc, char * argv[]) {
 	}
 
 	//TODO: try-catch
-	alignment = new Alignment(inputfile);
+	alignment = new foreseqs::Alignment(inputfile);
 	// if (!alignment) {
 	// 	cerr << "[ERROR] There was an error parsing input data." << endl;
 	// 	exit(EX_IOERR);
@@ -451,7 +439,7 @@ int main(int argc, char * argv[]) {
 
 	/* Check partitions / Warn if needed */
 
-	if (pllPartitions->numberOfPartitions == 1) {
+	if (alignment->getNumberOfPartitions() == 1) {
 		cout << endl << setfill('*') << setw(54) << "" << setfill(' ') << endl
 				<< "WARNING: There is only one partition." << endl
 				<< "         Branch lengths are taken from the input tree." << endl
@@ -461,93 +449,107 @@ int main(int argc, char * argv[]) {
 	/* Start! */
 	startTime = time(NULL);
 
-	tree = pll_utree_parse_newick(treefile.c_str());
+	unsigned int testNumTaxa;
+	tree = pll_utree_parse_newick(treefile.c_str(), &testNumTaxa);
 	if (!tree) {
 		cerr << "[ERROR] There was an error parsing newick file " << treefile << endl;
 		return (EXIT_FAILURE);
 	}
 
-	foreseqs::taxaNames = pllTree->nameList;
-
-	/* build translation array */
-	foreseqs::seqIndexTranslate = (unsigned int *) malloc ((foreseqs::numberOfTaxa+1)*sizeof(unsigned int));
-	for (unsigned int i=1; i<=foreseqs::numberOfTaxa; i++) {
-		for (unsigned int j=1; j<=foreseqs::numberOfTaxa; j++) {
-			if (!strcmp(pllAlignment->sequenceLabels[j], pllTree->tipNames[i])) {
-				foreseqs::seqIndexTranslate[i] = j;
-			}
-		}
+	if (foreseqs::numberOfTaxa != testNumTaxa)
+	{
+		cerr << "[ERROR] Number of taxa mismatch " << treefile << endl;
+		return (EXIT_FAILURE);
 	}
+
+  foreseqs::taxaNames = alignment->getLabels();
+	for (int i=0; i<foreseqs::numberOfTaxa; i++)
+	{
+
+	}
+	// foreseqs::taxaNames = pllTree->nameList;
+	//
+	// /* build translation array */
+	// foreseqs::seqIndexTranslate = (unsigned int *) malloc ((foreseqs::numberOfTaxa+1)*sizeof(unsigned int));
+	// for (unsigned int i=1; i<=foreseqs::numberOfTaxa; i++) {
+	// 	for (unsigned int j=1; j<=foreseqs::numberOfTaxa; j++) {
+	// 		if (!strcmp(pllAlignment->sequenceLabels[j], pllTree->tipNames[i])) {
+	// 			foreseqs::seqIndexTranslate[i] = j;
+	// 		}
+	// 	}
+	// }
 
 	cout << "Initializing model " << endl;
-	pllInitModel(pllTree, pllPartitions);
 
-	pllEvaluateLikelihood(pllTree, pllPartitions, pllTree->start, true, false);
 
-#ifdef PRINT_TRACE
-	cout << "TRACE: Initial log likelihood: " << pllTree->likelihood << endl;
-#endif
-
-	foreseqs::Utils::optimizeModelParameters(pllTree, pllPartitions);
-
-#ifdef PRINT_TRACE
-	for (int i=0; i<pllPartitions->numberOfPartitions; i++) {
-		pllTreeToNewick(pllTree->tree_string, pllTree, pllPartitions,
-				pllTree->start->back, true, true, false, false, false,
-				i, false, false);
-		cout << "PARTITION " << i << ": " << pllTree->tree_string << endl;
-	}
-#endif
-
-	currentTime = time(NULL);
-	cout << "Initiial inference done. It took " << currentTime - startTime << " seconds." << endl << endl;
-
-	/* Find missing sequences and branches */
-	vector<vector<unsigned int> > missingSequences =  foreseqs::Utils::findMissingSequences(pllTree, pllPartitions);
-	vector<vector<nodeptr> > missingBranches = foreseqs::Utils::findMissingBranches(pllTree, pllPartitions, missingSequences);
-
-#ifdef PRINT_TRACE
-	pllTreeToNewick(pllTree->tree_string, pllTree, pllPartitions,
-			pllTree->start->back, true, true, true, false, false,
-			PLL_SUMMARIZE_LH, false, false);
-	cout << pllTree->tree_string << endl;
-	for (size_t i = 0; i < missingBranches.size(); i++) {
-		cout << "PARTITION " << i << "/" << missingBranches.size() << endl;
-		cout << "  Branches: " << missingBranches[i].size() << endl;
-		for (size_t j = 0; j < missingBranches[i].size(); j++) {
-			cout << "    * " << missingBranches[i][j]->number << endl;
-		}
-	}
-#endif
-
-#if(TEST_SIM)
-	cout << endl << "T(ini,avg): ";
-	pllTreeToNewick(pllTree->tree_string, pllTree, pllPartitions,
-					pllTree->start->back, true, true, true, false, false,
-					PLL_SUMMARIZE_LH, false, false);
-	cout << pllTree->tree_string << endl;
-#endif
-
-	/* Predict sequences */
-	cout << "Predicting sequences..." << endl << endl;
-	for (unsigned int rep = 0; rep < numberOfReplicates; rep++) {
-
-		if (numberOfReplicates > 1) {
-			cout << "Replicate " << rep+1 << " of " << numberOfReplicates << endl;
-		}
-
-		for (unsigned int currentPartition = 0;
-				currentPartition < (unsigned int) pllPartitions->numberOfPartitions;
-				currentPartition++)
-		{
-
-			foreseqs::Predictor sequencePredictor(pllTree, pllPartitions,
-					pllAlignment, currentPartition, missingSequences[currentPartition],
-					&missingBranches);
-
-		 	sequencePredictor.predictMissingSequences();
-		}
-
+// 	pllInitModel(pllTree, pllPartitions);
+//
+// 	pllEvaluateLikelihood(pllTree, pllPartitions, pllTree->start, true, false);
+//
+// #ifdef PRINT_TRACE
+// 	cout << "TRACE: Initial log likelihood: " << pllTree->likelihood << endl;
+// #endif
+//
+// 	foreseqs::Utils::optimizeModelParameters(pllTree, pllPartitions);
+//
+// #ifdef PRINT_TRACE
+// 	for (int i=0; i<pllPartitions->numberOfPartitions; i++) {
+// 		pllTreeToNewick(pllTree->tree_string, pllTree, pllPartitions,
+// 				pllTree->start->back, true, true, false, false, false,
+// 				i, false, false);
+// 		cout << "PARTITION " << i << ": " << pllTree->tree_string << endl;
+// 	}
+// #endif
+//
+// 	currentTime = time(NULL);
+// 	cout << "Initiial inference done. It took " << currentTime - startTime << " seconds." << endl << endl;
+//
+// 	/* Find missing sequences and branches */
+// 	vector<vector<unsigned int> > missingSequences =  foreseqs::Utils::findMissingSequences(pllTree, pllPartitions);
+// 	vector<vector<nodeptr> > missingBranches = foreseqs::Utils::findMissingBranches(pllTree, pllPartitions, missingSequences);
+//
+// #ifdef PRINT_TRACE
+// 	pllTreeToNewick(pllTree->tree_string, pllTree, pllPartitions,
+// 			pllTree->start->back, true, true, true, false, false,
+// 			PLL_SUMMARIZE_LH, false, false);
+// 	cout << pllTree->tree_string << endl;
+// 	for (size_t i = 0; i < missingBranches.size(); i++) {
+// 		cout << "PARTITION " << i << "/" << missingBranches.size() << endl;
+// 		cout << "  Branches: " << missingBranches[i].size() << endl;
+// 		for (size_t j = 0; j < missingBranches[i].size(); j++) {
+// 			cout << "    * " << missingBranches[i][j]->number << endl;
+// 		}
+// 	}
+// #endif
+//
+// #if(TEST_SIM)
+// 	cout << endl << "T(ini,avg): ";
+// 	pllTreeToNewick(pllTree->tree_string, pllTree, pllPartitions,
+// 					pllTree->start->back, true, true, true, false, false,
+// 					PLL_SUMMARIZE_LH, false, false);
+// 	cout << pllTree->tree_string << endl;
+// #endif
+//
+// 	/* Predict sequences */
+// 	cout << "Predicting sequences..." << endl << endl;
+// 	for (unsigned int rep = 0; rep < numberOfReplicates; rep++) {
+//
+// 		if (numberOfReplicates > 1) {
+// 			cout << "Replicate " << rep+1 << " of " << numberOfReplicates << endl;
+// 		}
+//
+// 		for (unsigned int currentPartition = 0;
+// 				currentPartition < (unsigned int) pllPartitions->numberOfPartitions;
+// 				currentPartition++)
+// 		{
+//
+// 			foreseqs::Predictor sequencePredictor(pllTree, pllPartitions,
+// 					pllAlignment, currentPartition, missingSequences[currentPartition],
+// 					&missingBranches);
+//
+// 		 	sequencePredictor.predictMissingSequences();
+// 		}
+//
 // #if(TEST_SIM)
 // 			cout << endl << "T(ini," << currentPartition << "): ";
 // 			pllTreeToNewick(pllTree->tree_string, pllTree, pllPartitions,
@@ -584,43 +586,43 @@ int main(int argc, char * argv[]) {
 // 			sequencePredictor.predictMissingSequences();
 // 		}
 // #endif
-
-		currentTime = time(NULL);
-		cout << endl << "Prediction done. It took " << currentTime - startTime << " seconds." << endl << endl;
-
-	#ifdef PRINT_TRACE
-		pllAlignmentDataDumpConsole(pllAlignment);
-	#endif
-
-		cout << "Summarized tree (stolen branches): " << endl;
-		pllTreeToNewick(pllTree->tree_string, pllTree, pllPartitions,
-				pllTree->start->back, true, true, true, false, false,
-				PLL_SUMMARIZE_LH, false, false);
-		cout << pllTree->tree_string << endl;
-
-		if (foreseqs::predictSequences) {
-			stringstream rep_outputfile;
-			rep_outputfile << outputfile;
-			if (numberOfReplicates > 1) {
-				rep_outputfile << ".R" << rep;
-			}
-			pllAlignmentDataDumpFile(pllAlignment, PLL_FORMAT_PHYLIP,
-					rep_outputfile.str().c_str());
-
-			cout << "Alignment dumped to " << rep_outputfile.str() << endl << endl;
-		}
-	}
-
-#if(TEST_SIM)
-			if (originalFileDefined) {
-				pllAlignmentDataDestroy(originalAlignment);
-			}
-#endif
-
-	free(foreseqs::seqIndexTranslate);
-	pllAlignmentDataDestroy(pllAlignment);
-	pllPartitionsDestroy(pllTree, &pllPartitions);
-	pllDestroyInstance(pllTree);
+//
+// 		currentTime = time(NULL);
+// 		cout << endl << "Prediction done. It took " << currentTime - startTime << " seconds." << endl << endl;
+//
+// 	#ifdef PRINT_TRACE
+// 		pllAlignmentDataDumpConsole(pllAlignment);
+// 	#endif
+//
+// 		cout << "Summarized tree (stolen branches): " << endl;
+// 		pllTreeToNewick(pllTree->tree_string, pllTree, pllPartitions,
+// 				pllTree->start->back, true, true, true, false, false,
+// 				PLL_SUMMARIZE_LH, false, false);
+// 		cout << pllTree->tree_string << endl;
+//
+// 		if (foreseqs::predictSequences) {
+// 			stringstream rep_outputfile;
+// 			rep_outputfile << outputfile;
+// 			if (numberOfReplicates > 1) {
+// 				rep_outputfile << ".R" << rep;
+// 			}
+// 			pllAlignmentDataDumpFile(pllAlignment, PLL_FORMAT_PHYLIP,
+// 					rep_outputfile.str().c_str());
+//
+// 			cout << "Alignment dumped to " << rep_outputfile.str() << endl << endl;
+// 		}
+// 	}
+//
+// #if(TEST_SIM)
+// 			if (originalFileDefined) {
+// 				pllAlignmentDataDestroy(originalAlignment);
+// 			}
+// #endif
+//
+// 	free(foreseqs::seqIndexTranslate);
+// 	pllAlignmentDataDestroy(pllAlignment);
+// 	pllPartitionsDestroy(pllTree, &pllPartitions);
+// 	pllDestroyInstance(pllTree);
 
 	return (EX_OK);
 }

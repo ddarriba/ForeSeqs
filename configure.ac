@@ -53,6 +53,18 @@ AC_CHECK_HEADERS([pll.h], [], [
       AC_MSG_ERROR([pll.h not found])
     ])])
 
+if test "x$have_prefix" = "xyes"; then
+  AC_CHECK_HEADERS([libpll/pll_binary.h], [], [AC_MSG_ERROR([pll_binary.h not found])])
+  AC_CHECK_HEADERS([libpll/pllmod_algorithm.h], [], [AC_MSG_ERROR([pllmod_algorithm.h not found])])
+  AC_CHECK_HEADERS([libpll/pll_optimize.h], [], [AC_MSG_ERROR([pll_optimize.h not found])])
+  AC_CHECK_HEADERS([libpll/pll_tree.h], [], [AC_MSG_ERROR([pll_tree.h not found])])
+else
+  AC_CHECK_HEADERS([pll_binary.h], [], [AC_MSG_ERROR([pll_binary.h not found])])
+  AC_CHECK_HEADERS([pllmod_algorithm.h], [], [AC_MSG_ERROR([pllmod_algorithm.h not found])])
+  AC_CHECK_HEADERS([pll_optimize.h], [], [AC_MSG_ERROR([pll_optimize.h not found])])
+  AC_CHECK_HEADERS([pll_tree.h], [], [AC_MSG_ERROR([pll_tree.h not found])])
+fi
+
 AC_CHECK_LIB([pll], [pll_partition_create], [], [
   AC_MSG_ERROR([PLL library not found])
 ])

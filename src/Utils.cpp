@@ -123,13 +123,13 @@ double Utils::compareNucStates(unsigned char state0, unsigned char state1, bool 
 	}
 }
 
-vector< vector<unsigned int> > Utils::findMissingSequences( pll_partition_t * partitions, size_t numberOfPartitions ) {
+vector< vector<unsigned int> > Utils::findMissingSequences( pll_partition_t ** partitions, size_t numberOfPartitions ) {
 
 	vector< vector<unsigned int> > missingSeqs(numberOfPartitions);
 
 	for (size_t part = 0; part < numberOfPartitions; part++) {
 
-		pll_partition_t * partitions = partitions[part];
+		pll_partition_t * partition = partitions[part];
 		unsigned char undefinedSite = (partition->states==4)?15:22;
 
 		int start = 0,
@@ -140,7 +140,7 @@ vector< vector<unsigned int> > Utils::findMissingSequences( pll_partition_t * pa
 		for (unsigned int i = 1; i <= (unsigned int) partition->tips; i++) {
 			defined_sites = 0;
 			for (int j = start; j < end; j++) {
-				if (pllTree->tipchars[i][j] != undefinedSite)
+				if (partition->tipchars[i][j] != undefinedSite)
 					defined_sites++;
 			}
 			if (defined_sites <= (threshold * count)) {
@@ -153,10 +153,10 @@ vector< vector<unsigned int> > Utils::findMissingSequences( pll_partition_t * pa
 	return missingSeqs;
 }
 
-boolean Utils::subtreeIsMissing( const pll_utree_t * node,
-	                               vector<unsigned int> * missingSequences,
-																 vector<pll_utree_t> * missingBranches,
-															   size_t numberOfTips ) {
+bool Utils::subtreeIsMissing( pll_utree_t * node,
+	                            vector<unsigned int> * missingSequences,
+		  	 										  vector<pll_utree_t *> * missingBranches,
+															size_t numberOfTips ) {
 
 	if (find(missingBranches->begin(), missingBranches->end(), node)
 			!= missingBranches->end()) {
@@ -164,7 +164,7 @@ boolean Utils::subtreeIsMissing( const pll_utree_t * node,
 	}
 	if (node->clv_index > numberOfTips) {
 		if (subtreeIsMissing(node->next->back, missingSequences,
-				missingBranches, numeberOfTips)
+				missingBranches, numberOfTips)
 				& subtreeIsMissing(node->next->next->back, missingSequences,
 						missingBranches, numberOfTips)) {
 			missingBranches->push_back(node);
