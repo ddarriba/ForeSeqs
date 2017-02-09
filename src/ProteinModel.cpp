@@ -45,9 +45,9 @@ ProteinModel::ProteinModel(pll_partition_t * partition) :
 	size_t numRates = (NUM_AA - 1) * NUM_AA / 2;
 	_frequencies.resize(numFreqs);
 	_substRates.resize(numRates);
-	memcpy(&(_frequencies[0]), _partitionInfo->frequencies[0],
+	memcpy(&(_frequencies[0]), partition->frequencies[0],
 			numFreqs * sizeof(double));
-	memcpy(&(_substRates[0]), _partitionInfo->subst_params[0],
+	memcpy(&(_substRates[0]), partition->subst_params[0],
 			numRates * sizeof(double));
 
 	char statesChar[23] = { 'A', 'R', 'N', 'D', 'C', 'Q', 'E', 'G', 'H', 'I',

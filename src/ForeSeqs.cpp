@@ -21,8 +21,6 @@
  *  along with ForeSeqs.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-//#include "Predictor.h"
-
 #include "config.h"
 
 #include <iostream>
@@ -37,7 +35,9 @@
 
 #include "PllDefs.h"
 #include "Utils.h"
+#include "Phylo.h"
 #include "Alignment.h"
+#include "Predictor.h"
 
 using namespace std;
 
@@ -120,6 +120,8 @@ int main(int argc, char * argv[]) {
 
 	pll_utree_t * tree = 0;
 	foreseqs::Alignment * alignment = 0;
+	foreseqs::Phylo * phylo = 0;
+
 	string inputfile, treefile, partitionsfile, outputfile;
 	foreseqs::numberOfThreads = 1;
 #if(TEST_SIM)
@@ -463,10 +465,8 @@ int main(int argc, char * argv[]) {
 	}
 
   foreseqs::taxaNames = alignment->getLabels();
-	for (int i=0; i<foreseqs::numberOfTaxa; i++)
-	{
 
-	}
+
 	// foreseqs::taxaNames = pllTree->nameList;
 	//
 	// /* build translation array */
@@ -481,33 +481,14 @@ int main(int argc, char * argv[]) {
 
 	cout << "Initializing model " << endl;
 
+	phylo = new foreseqs::Phylo(*alignment, tree, 4);
 
-// 	pllInitModel(pllTree, pllPartitions);
-//
-// 	pllEvaluateLikelihood(pllTree, pllPartitions, pllTree->start, true, false);
-//
-// #ifdef PRINT_TRACE
-// 	cout << "TRACE: Initial log likelihood: " << pllTree->likelihood << endl;
-// #endif
-//
-// 	foreseqs::Utils::optimizeModelParameters(pllTree, pllPartitions);
-//
-// #ifdef PRINT_TRACE
-// 	for (int i=0; i<pllPartitions->numberOfPartitions; i++) {
-// 		pllTreeToNewick(pllTree->tree_string, pllTree, pllPartitions,
-// 				pllTree->start->back, true, true, false, false, false,
-// 				i, false, false);
-// 		cout << "PARTITION " << i << ": " << pllTree->tree_string << endl;
-// 	}
-// #endif
-//
-// 	currentTime = time(NULL);
-// 	cout << "Initiial inference done. It took " << currentTime - startTime << " seconds." << endl << endl;
-//
-// 	/* Find missing sequences and branches */
-// 	vector<vector<unsigned int> > missingSequences =  foreseqs::Utils::findMissingSequences(pllTree, pllPartitions);
-// 	vector<vector<nodeptr> > missingBranches = foreseqs::Utils::findMissingBranches(pllTree, pllPartitions, missingSequences);
-//
+	for (size_t part =0; part < alignment->getNumberOfPartitions(); part++)
+		double logLikelihood = phylo->optimizeModelParameters(part, 0.01, 0.01);
+
+ 	currentTime = time(NULL);
+ 	cout << "Initial inference done. It took " << currentTime - startTime << " seconds." << endl << endl;
+
 // #ifdef PRINT_TRACE
 // 	pllTreeToNewick(pllTree->tree_string, pllTree, pllPartitions,
 // 			pllTree->start->back, true, true, true, false, false,
@@ -531,24 +512,22 @@ int main(int argc, char * argv[]) {
 // #endif
 //
 // 	/* Predict sequences */
-// 	cout << "Predicting sequences..." << endl << endl;
-// 	for (unsigned int rep = 0; rep < numberOfReplicates; rep++) {
+ 	cout << "Predicting sequences..." << endl << endl;
+ 	for (unsigned int rep = 0; rep < numberOfReplicates; rep++) {
 //
 // 		if (numberOfReplicates > 1) {
 // 			cout << "Replicate " << rep+1 << " of " << numberOfReplicates << endl;
 // 		}
 //
-// 		for (unsigned int currentPartition = 0;
-// 				currentPartition < (unsigned int) pllPartitions->numberOfPartitions;
-// 				currentPartition++)
-// 		{
-//
-// 			foreseqs::Predictor sequencePredictor(pllTree, pllPartitions,
-// 					pllAlignment, currentPartition, missingSequences[currentPartition],
-// 					&missingBranches);
-//
-// 		 	sequencePredictor.predictMissingSequences();
-// 		}
+		for (unsigned int currentPartition = 0;
+				currentPartition < (unsigned int) alignment->getNumberOfPartitions();
+				currentPartition++)
+		{
+			foreseqs::Predictor sequencePredictor(tree, *phylo,
+					*alignment, currentPartition);
+
+		 	sequencePredictor.predictMissingSequences();
+		}
 //
 // #if(TEST_SIM)
 // 			cout << endl << "T(ini," << currentPartition << "): ";
@@ -587,8 +566,8 @@ int main(int argc, char * argv[]) {
 // 		}
 // #endif
 //
-// 		currentTime = time(NULL);
-// 		cout << endl << "Prediction done. It took " << currentTime - startTime << " seconds." << endl << endl;
+ 		currentTime = time(NULL);
+ 		cout << endl << "Prediction done. It took " << currentTime - startTime << " seconds." << endl << endl;
 //
 // 	#ifdef PRINT_TRACE
 // 		pllAlignmentDataDumpConsole(pllAlignment);
@@ -611,7 +590,7 @@ int main(int argc, char * argv[]) {
 //
 // 			cout << "Alignment dumped to " << rep_outputfile.str() << endl << endl;
 // 		}
-// 	}
+	}
 //
 // #if(TEST_SIM)
 // 			if (originalFileDefined) {

@@ -36,13 +36,28 @@ namespace foreseqs {
 class Phylo {
 public:
   Phylo(Alignment & alignment,
-        pll_utree_t * tree);
+        pll_utree_t * tree,
+        unsigned int numRateCategories);
   ~Phylo( void );
 
+  double optimizeModelParameters( int partitionId, double tolerance, double epsilon );
+  pll_partition_t * getPartition( int partitionId ) { return _partitions[partitionId]; }
+  std::vector<unsigned int> getMissingSequences( int partitionId ){ return _missingSequences[partitionId]; }
+ 	std::vector<pll_utree_t *> getMissingBranches( int partitionId ){ return _missingBranches[partitionId]; }
 private:
+
+  void setActivePartition( int partitionId );
+  void updateBranches( void );
+
   Alignment & _alignment;
   std::vector< pll_partition_t * > _partitions;
   pll_utree_t * _tree;
+
+  double _alpha;
+  unsigned int _activePartition;
+
+  std::vector<std::vector<unsigned int> > _missingSequences;
+ 	std::vector<std::vector<pll_utree_t *> > _missingBranches;
 };
 
 } /* namespace foreseqs */

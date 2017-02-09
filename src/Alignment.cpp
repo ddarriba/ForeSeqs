@@ -106,21 +106,6 @@ static int lex_table[ASCII_SIZE] = {
 /* |}~  */    SYM_CHAR, SYM_UNKNOWN, SYM_UNKNOWN,   SYM_UNKNOWN
  };
 
- typedef struct
-  {
-    int 	        tokenType;
-    const char * lexeme;
-    long         len;
-  } lexToken;
-
-  static int get_next_byte (void);
-  static int get_next_symbol (void);
-  static lexToken get_token (int * input);
-
-  static const char * rawtext;
-  static long rawtext_size;
-  static long pos = 0;
-  
 namespace foreseqs {
 
   Alignment::Alignment(const string & filename)
@@ -135,9 +120,87 @@ namespace foreseqs {
       pll_msa_destroy(msa);
   }
 
+  static char * read_file (string filename, long * filesize)
+  {
+    FILE * fp;
+    char * rawdata;
+
+    fp = fopen (filename.c_str(), "r");
+    if (!fp) return (NULL);
+
+    /* obtain file size */
+    if (fseek (fp, 0, SEEK_END) == -1)
+     {
+       fclose (fp);
+       return (NULL);
+     }
+
+    *filesize = ftell (fp);
+
+    if (*filesize == -1)
+     {
+       fclose (fp);
+       return (NULL);
+     }
+    rewind (fp);
+
+    /* allocate buffer and read file contents */
+    rawdata = (char *) Utils::allocate(((size_t)(*filesize) + 10), sizeof (char));
+    if (rawdata)
+     {
+       if (fread (rawdata, sizeof (char), (size_t)*filesize, fp) != (size_t) *filesize)
+        {
+          free (rawdata);
+          rawdata = NULL;
+        }
+       else
+        {
+          rawdata[*filesize] = 0;
+        }
+     }
+
+    fclose (fp);
+
+    return rawdata;
+  }
+
+  void Alignment::init_lexan (const char * text, long n)
+  {
+    rawtext      = text;
+    rawtext_size = n;
+    pos          = 0;
+  }
+
   int Alignment::loadPartitionsFile(const string & filename)
   {
-    return PLL_SUCCESS;
+    long n;
+    char * rawdata;
+    int input;
+    vector<PartitionDesc> * partitions;
+
+    rawdata = read_file (filename, &n);
+    if (!rawdata)
+     {
+       cerr << "Cannot read file " << filename << endl;
+       return 0;
+     }
+
+    n = (long) strlen (rawdata);
+
+    init_lexan (rawdata, n);
+    input = get_next_symbol();
+
+    partitions = parse_partition (&input);
+
+    free (rawdata);
+
+cout << "LOAD PARTS " << partitions << endl;
+    if (!partitions)
+      return 0;
+
+    partitionDescriptors.insert(partitionDescriptors.end(), partitions->begin(), partitions->end());
+
+    return partitions->size();
   }
 
   char ** Alignment::getLabels( void )
@@ -147,7 +210,7 @@ namespace foreseqs {
 
   char * Alignment::getSequence( unsigned int taxonId, int partId )
   {
-    return msa->sequence[taxonId] + partitionDescriptors[partId].start;
+    return msa->sequence[taxonId] + partitionDescriptors[partId].start - 1;
   }
 
   unsigned int Alignment::getSequenceCount( void ) const
@@ -186,9 +249,7 @@ namespace foreseqs {
 
 
 
-
-
-  static int get_next_byte (void)
+  int Alignment::get_next_byte (void)
   {
     if (pos == rawtext_size)
      {
@@ -199,7 +260,7 @@ namespace foreseqs {
     return (rawtext[pos++]);
   }
 
-  static int get_next_symbol (void)
+  int Alignment::get_next_symbol (void)
   {
     int ch, sym;
 
@@ -225,7 +286,7 @@ namespace foreseqs {
     return sym;
   }
 
-  static lexToken get_token (int * input)
+  lexToken Alignment::get_token (int * input)
   {
     lexToken token;
     long
@@ -397,7 +458,7 @@ namespace foreseqs {
     return (token);
   }
 
-  static vector<PartitionDesc> * parse_partition (int * inp)
+  vector<PartitionDesc> * Alignment::parse_partition (int * inp)
   {
       int input;
       lexToken token;

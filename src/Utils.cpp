@@ -162,11 +162,12 @@ bool Utils::subtreeIsMissing( pll_utree_t * node,
 			!= missingBranches->end()) {
 		return true;
 	}
-	if (node->clv_index > numberOfTips) {
+	if (node->clv_index >= numberOfTips) {
 		if (subtreeIsMissing(node->next->back, missingSequences,
 				missingBranches, numberOfTips)
 				& subtreeIsMissing(node->next->next->back, missingSequences,
 						missingBranches, numberOfTips)) {
+			cout << "Push " << node->clv_index << " and " << node->back->clv_index << endl;
 			missingBranches->push_back(node);
 			missingBranches->push_back(node->back);
 			return true;
@@ -177,10 +178,12 @@ bool Utils::subtreeIsMissing( pll_utree_t * node,
 		if (find(missingSequences->begin(), missingSequences->end(), node->clv_index)
 				!= missingSequences->end()) {
 
+			cout << "Push " << node->clv_index << " and " << node->back->clv_index << endl;
 			missingBranches->push_back(node);
 			missingBranches->push_back(node->back);
 
 			/* remove visited taxon */
+			cout << "Remove taxon " << node->clv_index << endl;
 			missingSequences->erase(
 					remove(missingSequences->begin(), missingSequences->end(),
 							node->clv_index), missingSequences->end());
@@ -203,7 +206,8 @@ pll_utree_t * Utils::findRootingNode( pll_utree_t * tree,
 		return(0);
 	}
 
-	if (tree->back->clv_index <= numberOfTips) {
+	if (tree->back->clv_index < numberOfTips) {
+		cout << "Erase " << tree->back->clv_index << endl;
 		missingSequences->erase(
 				remove(missingSequences->begin(), missingSequences->end(),
 						tree->back->clv_index), missingSequences->end());
@@ -220,9 +224,9 @@ pll_utree_t * Utils::findRootingNode( pll_utree_t * tree,
 			cerr << "ERROR: Everything is missing!!" << endl;
 			exit(EX_IOERR);
 		} else if (!(missingRight || missingLeft)) {
-#ifdef PRINT_TRACE
+// #ifdef PRINT_TRACE
 			cout << "TRACE: Found ancestor in " << currentNode->clv_index << endl;
-#endif
+// #endif
 
 			missingBranches->push_back(currentNode);
 			missingBranches->push_back(currentNode->back);
@@ -236,9 +240,9 @@ pll_utree_t * Utils::findRootingNode( pll_utree_t * tree,
 					(!missingRight) ?
 							currentNode->next->back :
 							currentNode->next->next->back;
-#ifdef PRINT_TRACE
+// #ifdef PRINT_TRACE
 			cout << "TRACE: Moving node to " << currentNode->clv_index << endl;
-#endif
+// #endif
 		}
 	}
 
@@ -257,12 +261,21 @@ vector< vector<pll_utree_t *> > Utils::findMissingBranches (
 	vector< vector<pll_utree_t *> > missingBranches((size_t)numberOfPartitions);
 
 	for (size_t part = 0; part < numberOfPartitions; part++) {
+		cout << " " << missingSequences[part].size() << endl;
+		 for (unsigned int ms=0; ms < missingSequences[part].size(); ms++)
+		 	cout << " " << missingSequences[part][ms];
+		 	cout << endl;
 		while (missingSequences[part].size()) {
+			cout << " Find rooting for " << tipNodes[part]->node_index << "." << tipNodes[part]->clv_index << " [" << part << "]" << endl;
 			findRootingNode(tipNodes[part]->back,
 				              &missingSequences[part],
 											&missingBranches[part],
 											numberOfTips);
 		}
+		cout << " " << missingSequences[part].size() << endl;
+		 for (unsigned int ms=0; ms < missingSequences[part].size(); ms++)
+		 	cout << " " << missingSequences[part][ms];
+		 	cout << endl;
 		sort(missingBranches[part].begin(), missingBranches[part].end(), compareNodes);
 	}
 

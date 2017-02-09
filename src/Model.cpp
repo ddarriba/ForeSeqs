@@ -39,7 +39,7 @@ Model::Model(pll_partition_t * partition) :
 }
 
 Model::Model(const Model& other) :
-	  _partition(other._partition)
+	  _partition(other._partition),
 		_numberOfStates(other._numberOfStates),
 		_frequencies(other._frequencies), _substRates(other._substRates),
 		_charStates(other._charStates), _statesToIntMap(other._statesToIntMap) {
@@ -55,7 +55,7 @@ Model& Model::operator=(const Model& other) {
 	_numberOfStates = other._numberOfStates;
 
 	assert(_partition->states = _numberOfStates);
-	
+
 	_frequencies = other._frequencies;
 	_substRates = other._substRates;
 	_charStates = other._charStates;

@@ -3,12 +3,12 @@ bin_PROGRAMS = foreseqs
 foreseqs_SOURCES = ForeSeqs.cpp \
 									 Utils.cpp \
 									 Alignment.cpp \
+									 Predictor.cpp \
+									 DnaModel.cpp \
+									 ProteinModel.cpp \
+								   Model.cpp \
 									 Phylo.cpp
 
-##	Predictor.cpp \
-##	DnaModel.cpp \
-##	ProteinModel.cpp \
-##	Model.cpp \
 
 foreseqs_CFLAGS = -g -O3 -Wall $(SIMD_FLAGS)
 foreseqs_CPPFLAGS = -g -O3 -Wall $(SIMD_FLAGS)

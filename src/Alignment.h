@@ -38,6 +38,13 @@ typedef struct {
   int end;
 } PartitionDesc;
 
+typedef struct
+ {
+   int 	        tokenType;
+   const char * lexeme;
+   long         len;
+ } lexToken;
+
 class Alignment {
 public:
   Alignment(const std::string & filename);
@@ -60,6 +67,16 @@ private:
   unsigned int sequenceCount;
   unsigned int sequenceLength;
   std::vector< PartitionDesc > partitionDescriptors;
+
+  const char * rawtext;
+  long rawtext_size;
+  long pos;
+
+  void init_lexan (const char * text, long n);
+  int get_next_symbol (void);
+  int get_next_byte (void);
+  lexToken get_token (int * input);
+  std::vector<PartitionDesc> * parse_partition (int * inp);
 };
 
 } /* namespace foreseqs */

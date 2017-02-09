@@ -115,7 +115,7 @@ protected:
 	void constructPMatrix(double * pMatrix, double branchLength, bool cummulative, size_t numStates, const double * eigenValues, const double * Cijk);
 
   pll_partition_t * _partition;
-	size_t numberOfStates;                /** Number of states */
+	size_t _numberOfStates;               /** Number of states */
 	std::vector<double> _frequencies;     /** Frequencies */
 	std::vector<double> _substRates;      /** Substitution rates */
 	std::vector<char> _charStates;        /** Vector of the different states */
