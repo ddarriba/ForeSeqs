@@ -55,7 +55,6 @@ private:
 	void SetupGTR( void );
 
 	double _Cijk[CUNUM_NUC];        /** The cumulative transition probability matrix */
-	double _eigenValues[NUM_NUC];   /** Eigenvalues */
 };
 
 } /* namespace foreseqs */

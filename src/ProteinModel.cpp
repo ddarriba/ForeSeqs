@@ -85,11 +85,6 @@ ProteinModel::~ProteinModel() {
 
 void ProteinModel::SetupGTR( void ) {
 
-	double fracchange = computeFracchange();
-	for (size_t i = 0; i < NUM_AA; i++) {
-		_eigenValues[i] = -_partition->eigenvals[0][i] / fracchange;
-	}
-
 	for (size_t i = 0; i < NUM_AA; i++) {
 		for (size_t j = 0; j < NUM_AA; j++) {
 			for (size_t k = 0; k < NUM_AA; k++) {
@@ -124,7 +119,7 @@ char ProteinModel::getMostProbableState(const double * probArray) const {
 }
 
 void ProteinModel::setMatrix(double * matrix, double branchLength, bool cummulative) {
-	constructPMatrix(matrix, branchLength, cummulative, NUM_AA, _eigenValues, _Cijk);
+	constructPMatrix(matrix, branchLength, cummulative, NUM_AA);
 }
 
 } /* namespace foreseqs */

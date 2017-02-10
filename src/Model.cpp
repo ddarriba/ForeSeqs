@@ -63,90 +63,149 @@ Model& Model::operator=(const Model& other) {
 	return *this;
 }
 
-double Model::computeFracchange( void ) const {
+void Model::constructPMatrix(double * matrix,
+	                           double branchLength,
+														 bool cummulative,
+														 size_t numStates)
+{
 
-	unsigned int numberOfStates = _numberOfStates;
-	assert (numberOfStates == _frequencies.size());
-	assert ((numberOfStates * (numberOfStates-1))/2 == _substRates.size());
+	unsigned int n,j,k,m;
+	double * expd;
+	double * temp;
 
-	/* convert rates into matrix */
-	double * r;
-	r = (double *) alloca(numberOfStates * numberOfStates * sizeof(double));
-	unsigned int i = 0;
-	for (unsigned int j = 0; j < (numberOfStates-1); j++)
-		for (unsigned int k = j + 1; k < numberOfStates; k++)
-			r[j*numberOfStates+k] = _substRates[i++];
-	for (unsigned int j = 0; j < numberOfStates; j++) {
-		r[j*numberOfStates+j] = 0.0;
-		for (unsigned int k = 0; k < j; k++)
-			r[j*numberOfStates+k] = r[k*numberOfStates+j];
-	}
+  double * evecs;
+  double * inv_evecs;
+  double * evals;
+  double * pmat;
 
-	/* evaluate fracchange */
-	double fracchange = 0.0;
-	for (unsigned int j = 0; j < numberOfStates; j++)
-		for (unsigned int k = 0; k < numberOfStates; k++)
-			fracchange += _frequencies[j] * r[j*numberOfStates+k] * _frequencies[k];
-	return fracchange;
+	expd = (double *)malloc(numStates * sizeof(double));
+	temp = (double *)malloc(numStates*numStates*sizeof(double));
 
-}
+	assert(branchLength >= 0);
 
-void Model::constructPMatrix(double * matrix, double branchLength, bool cummulative, size_t numStates, const double * eigenValues, const double * Cijk) {
-	double expt[numStates];
-	double *P;
-	size_t squaredNumStates = numStates * numStates;
-
-	P = matrix;
-
-	if (branchLength < MIN_BRANCH_LEN) {
-		/* account for near zero branch lengths */
-		for (size_t i = 0; i < numStates; i++) {
-			for (size_t j = 0; j < numStates; j++) {
-				if (cummulative)
-					*P = (i<=j)?1.0:0.0;
-				else
-					*P = (i==j)?1.0:0.0;
-				P++;
-			}
-		}
-		return;
-	}
-	else
+	/* compute effective pmatrix location */
+	for (n = 0; n < _partition->rate_cats; ++n)
 	{
-		for (size_t k = 1; k < numStates; k++) {
-			expt[k] = exp(branchLength * eigenValues[k]);
+		double * evecs = _eigenVecs;
+		double * inv_evecs = _invEigenVecs;
+		double * evals = _eigenVals;
+
+		/* if branch length is zero then set the p-matrix to identity matrix */
+		if (!branchLength)
+		{
+			for (j = 0; j < numStates; ++j)
+				for (k = 0; k < numStates; ++k)
+					matrix[j*numStates + k] = (j == k) ? 1 : 0;
 		}
-		for (size_t i = 0; i < numStates; i++) {
-			for (size_t j = 0; j < numStates; j++) {
-				(*P) = Cijk[i * squaredNumStates + j * numStates + 0];
-				for (size_t k = 1; k < numStates; k++) {
-					(*P) += Cijk[i * squaredNumStates + j * numStates + k]
-							* expt[k];
+		else
+		{
+			/* exponentiate eigenvalues */
+			for (j = 0; j < numStates; ++j)
+				expd[j] = exp(evals[j] * _partition->rates[n] * branchLength);
+
+			for (j = 0; j < numStates; ++j)
+				for (k = 0; k < numStates; ++k)
+					temp[j*numStates+k] = inv_evecs[j*numStates+k] * expd[k];
+
+			for (j = 0; j < numStates; ++j)
+			{
+				for (k = 0; k < numStates; ++k)
+				{
+					matrix[j*numStates+k] = 0;
+					for (m = 0; m < numStates; ++m)
+					{
+						matrix[j*numStates+k] +=
+								temp[j*numStates+m] * evecs[m*numStates+k];
+					}
 				}
-				P++;
 			}
 		}
 	}
+
 	if (cummulative) {
-		/* the rows are cumulative to help with picking one using
-		 a random number */
-		for (size_t i = 0; i < numStates; i++) {
-			for (size_t j = 1; j < numStates; j++) {
-				size_t nextIndex = numStates * i + j;
-				matrix[nextIndex] += matrix[nextIndex - 1];
+			/* the rows are cumulative to help with picking one using
+			 a random number */
+			for (size_t i = 0; i < numStates; i++) {
+				for (size_t j = 1; j < numStates; j++) {
+					size_t nextIndex = numStates * i + j;
+					matrix[nextIndex] += matrix[nextIndex - 1];
+				}
+				assert(Utils::floatEquals(matrix[numStates * (i + 1) - 1], 1.0));
 			}
-			assert(Utils::floatEquals(matrix[numStates * (i + 1) - 1], 1.0));
-		}
-	} else {
-		/* the matrix rows sum to 1.0 */
-		for (size_t i = 0; i < numStates; i++) {
-			double sum = 0.0;
-			for (size_t j = 0; j < numStates; j++) {
-				sum += matrix[numStates * i + j];
+		} else {
+			/* the matrix rows sum to 1.0 */
+			for (size_t i = 0; i < numStates; i++) {
+				double sum = 0.0;
+				for (size_t j = 0; j < numStates; j++) {
+					sum += matrix[numStates * i + j];
+				}
+				assert(Utils::floatEquals(sum, 1.0));
 			}
-			assert(Utils::floatEquals(sum, 1.0));
 		}
-	}
+
+	free(expd);
+	free(temp);
 }
+
+//
+// 	double expt[numStates];
+// 	double *P;
+// 	size_t squaredNumStates = numStates * numStates;
+//
+// 	P = matrix;
+//
+// 	if (branchLength < MIN_BRANCH_LEN) {
+// 		/* account for near zero branch lengths */
+// 		for (size_t i = 0; i < numStates; i++) {
+// 			for (size_t j = 0; j < numStates; j++) {
+// 				if (cummulative)
+// 					*P = (i<=j)?1.0:0.0;
+// 				else
+// 					*P = (i==j)?1.0:0.0;
+// 				P++;
+// 			}
+// 		}
+// 		return;
+// 	}
+// 	else
+// 	{
+// 		for (size_t k = 0; k < numStates; k++) {
+// 			expt[k] = exp(branchLength * eigenValues[k]);
+// 			cout << " [EI " << k << "] " << eigenValues[k] << " " << expt[k] << endl;
+// 		}
+// 		for (size_t i = 0; i < numStates; i++) {
+// 			for (size_t j = 0; j < numStates; j++) {
+// 				(*P) = Cijk[i * squaredNumStates + j * numStates + 0];
+// 				for (size_t k = 1; k < numStates; k++) {
+// 					(*P) += Cijk[i * squaredNumStates + j * numStates + k]
+// 							* expt[k];
+// 				}
+// 				P++;
+// 			}
+// 		}
+// 	}
+// 	if (cummulative) {
+// 		/* the rows are cumulative to help with picking one using
+// 		 a random number */
+// 		for (size_t i = 0; i < numStates; i++) {
+// 			for (size_t j = 1; j < numStates; j++) {
+// 				size_t nextIndex = numStates * i + j;
+// 				matrix[nextIndex] += matrix[nextIndex - 1];
+// 				cout << " [" << nextIndex << "] " << matrix[nextIndex];
+// 			}
+// 			cout << endl;
+// 			assert(Utils::floatEquals(matrix[numStates * (i + 1) - 1], 1.0));
+// 		}
+// 	} else {
+// 		/* the matrix rows sum to 1.0 */
+// 		for (size_t i = 0; i < numStates; i++) {
+// 			double sum = 0.0;
+// 			for (size_t j = 0; j < numStates; j++) {
+// 				sum += matrix[numStates * i + j];
+// 			}
+// 			assert(Utils::floatEquals(sum, 1.0));
+// 		}
+// 	}
+// }
 
 } /* namespace foreseqs */

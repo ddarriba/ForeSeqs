@@ -96,13 +96,6 @@ public:
 protected:
 
 	/**
-	 * @brief Compute the fracchange value according to frequencies and substRates
-	 *
-	 * @return the fracchange
-	 */
-	double computeFracchange( void ) const;
-
-	/**
 	 * @brief Compute the P-Matrix for selecting the character to insert
 	 *
 	 * @param[out] pMatrix the (already allocated) P matrix
@@ -112,7 +105,10 @@ protected:
 	 * @param[in] eigenValues the EIGEN values
 	 * @param[in] Cijk the probabilities
 	 */
-	void constructPMatrix(double * pMatrix, double branchLength, bool cummulative, size_t numStates, const double * eigenValues, const double * Cijk);
+	void constructPMatrix(double * matrix,
+                        double branchLength,
+ 											  bool cummulative,
+ 											  size_t numStates);
 
   pll_partition_t * _partition;
 	size_t _numberOfStates;               /** Number of states */
@@ -120,6 +116,10 @@ protected:
 	std::vector<double> _substRates;      /** Substitution rates */
 	std::vector<char> _charStates;        /** Vector of the different states */
 	std::map<char, unsigned int> _statesToIntMap;  /** Map of the states index according to char */
+
+	double * _eigenVals;
+	double * _eigenVecs;
+	double * _invEigenVecs;
 };
 
 } /* namespace foreseqs */

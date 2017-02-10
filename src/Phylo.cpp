@@ -23,6 +23,8 @@
 
 #include "Phylo.h"
 
+#include <algorithm>
+
 using namespace std;
 
 typedef struct
@@ -44,8 +46,8 @@ static int cbSetIndices(pll_utree_t * node, void *data)
     {
       if (!strcmp(labelsData->labels[i], currentLabel))
       {
-        /* set node, clv and scaler indices */
-        node->clv_index = node->scaler_index = node->node_index = i;
+        /* set node and clv indices */
+        node->clv_index = node->node_index = i;
         break;
       }
     }
@@ -207,21 +209,24 @@ void Phylo::setActivePartition( int partitionId )
     pll_utree_query_tipnodes (tree, tipNodes);
 
 pll_utree_show_ascii(tree, PLL_UTREE_SHOW_LABEL | PLL_UTREE_SHOW_CLV_INDEX | PLL_UTREE_SHOW_SCALER_INDEX);
-    vector< vector<pll_utree_t *> > branches =
+    vector< vector<pll_utree_t *> > branches;
+    _missingBranches =
     Utils::findMissingBranches (tipNodes,
     														_missingSequences,
     														numberOfTaxa,
     														numberOfPartitions );
 
-    cout << "Found " << branches[0].size() << " and " << branches[1].size() << endl;
+    cout << "Found " << _missingBranches[0].size() << " and " << _missingBranches[1].size() << endl;
     for (size_t part = 0; part < numberOfPartitions; part++)
     {
-      for (size_t i = 0; i < branches[part].size(); i++)
+      for (size_t i = 0; i < _missingBranches[part].size(); i++)
       {
-        cout << "  " << branches[part][i]->clv_index;
+        cout << "  " << _missingBranches[part][i]->clv_index;
       }
       cout << endl;
     }
+
+    //_missingBranches.inse
   }
 
   Phylo::~Phylo( void )
@@ -334,4 +339,14 @@ char *newick = pll_utree_export_newick(_tree);
 #endif
     return logLikelihood;
   }
+
+  bool Phylo::isBranchMissing( pll_utree_t * node, int partitionId )
+  {
+    if (find(_missingBranches[partitionId].begin(),
+        _missingBranches[partitionId].end(), node)
+          == _missingBranches[partitionId].end())
+      return false;
+    return true;
+  }
+
 }

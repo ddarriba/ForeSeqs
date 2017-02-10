@@ -40,19 +40,29 @@
 #include <cblas.h>
 #endif
 
+#define PRINT_TRACE
+
 using namespace std;
 
 #define MIN_BR_LEN 0.00001
 
 namespace foreseqs {
 
-	static char * getAncestral(pll_partition_t * partition, pll_utree_t * node)
+	static char * getAncestral(pll_partition_t * partition,
+		                         pll_utree_t * node,
+														 Model * model)
 	{
 		char * ancestral = (char *) malloc (partition->sites + 1);
-		char * anc_ptr = ancestral;
-		//TODO
+		char * anc_ptr;
+		double * clvp;
+
+		anc_ptr = ancestral;
+		clvp = partition->clv[node->clv_index];
 		for (int i=0; i<partition->sites; i++)
-			*(anc_ptr++) = 'X';
+		{
+			*(anc_ptr++) = model->getMostProbableState(clvp);
+			clvp += partition->states * partition->rate_cats;
+		}
 		*anc_ptr = '\0';
 
 		return ancestral;
@@ -65,16 +75,19 @@ Predictor::Predictor(pll_utree_t * tree,
 		    _tree(tree),
 				_partition(phylo.getPartition(partitionNumber)),
 		    _alignment(alignment),
+				_phylo(phylo),
 				_partitionNumber(partitionNumber), _numberOfStates(0),
 				_start(alignment.getStartPosition(partitionNumber)),
 				_end(alignment.getEndPosition(partitionNumber)),
-				_partitionLength(_end - _start), _catToSite(0),
+				_partitionLength(_end - _start + 1), _catToSite(0),
 				_missingSubtreesAncestors(),
 				_missingSequences(phylo.getMissingSequences(partitionNumber)),
 				_missingBranches(phylo.getMissingBranches(partitionNumber)),
 				_missingPartsCount(0),
-				_currentModel(0), _seqSimilarity(0),
-				_branchLengthScaler(1.0), _scalers() {
+				_currentModel(0),
+				_seqSimilarity(0),
+				_branchLengthScaler(1.0),
+				_scalers() {
 
 	if (alignment.getDataType(partitionNumber) == DT_NUCLEIC) {
 		_currentModel = new DnaModel(_partition);
@@ -121,7 +134,31 @@ Predictor::Predictor(pll_utree_t * tree,
 					perSiteLikelihoods[i] = -10000;
 				}
 
+				double * iclv = (double *) malloc(_partition->states * _partitionLength * sizeof(double));
 				for (short k = 0; k < (short)numberOfRateCategories; k++) {
+					double * clvp = _partition->clv[_tree->clv_index] + k * _partition->states;
+					for (int s = 0; s<_partitionLength; s++) {
+						iclv[s] = *clvp;
+						clvp += _partition->states;
+					}
+					unsigned int freqsIndex = 0;
+					pll_core_edge_loglikelihood_ti(_partition->states,
+					                              _partition->sites,
+					                                      1,
+					                                      iclv,
+																								_partition->scale_buffer[_tree->scaler_index],
+																							  _partition->tipchars[_tree->back->node_index],
+																								_partition->tipmap,
+																								_partition->maxstates,
+			                                          _partition->pmatrix[_tree->pmatrix_index],
+			                                          _partition->frequencies,
+			                                          _partition->rate_weights,
+			                                          _partition->pattern_weights,
+			                                          _partition->prop_invar,
+			                                          _partition->invariant,
+			                                          &freqsIndex,
+			                                          perSiteLikelihoods,
+			                                          _partition->attributes);
 
 					//TODO: USE ONE SINGLE CATEGORY
 
@@ -150,7 +187,7 @@ Predictor::Predictor(pll_utree_t * tree,
 					// 	Y++;
 					// }
 				}
-
+				free(iclv);
 				free(perSiteLikelihoods);
 
 				// /* reset rates */
@@ -181,6 +218,7 @@ Predictor::Predictor(pll_utree_t * tree,
 Predictor::Predictor(const Predictor& other) :
 				_tree(other._tree), _partition(other._partition),
 						_alignment(other._alignment),
+						_phylo(other._phylo),
 						_partitionNumber(other._partitionNumber),
 						_numberOfStates(other._numberOfStates),
 						_start(other._start),_end(other._end),
@@ -370,11 +408,13 @@ double Predictor::computeBranchLength(pll_utree_t * node) const {
 
 	if (isMissingBranch(node, _partitionNumber) && _alignment.getNumberOfPartitions() > 1) {
 		int sumwgt = 0;
+cout << " Branch " << _partitionNumber << " " << node->node_index << endl;
 
 		/* compute the total weight */
 		for (unsigned int i = 0;
 						i < (unsigned int) _alignment.getNumberOfPartitions(); i++) {
 			if (!isMissingBranch(node, i)) {
+				cout << " Sum: " << i << " " << _alignment.getSequenceLength(i) << endl;
 				sumwgt += _alignment.getSequenceLength(i);
 			}
 		}
@@ -446,12 +486,8 @@ bool Predictor::isAncestor(pll_utree_t * node) const {
 	return true;
 }
 
-bool Predictor::isMissingBranch(const pll_utree_t * node, size_t partition) const {
-	if (find(_missingBranches.begin(),
-			_missingBranches.end(), node)
-				== _missingBranches.end())
-		return false;
-	return true;
+bool Predictor::isMissingBranch(pll_utree_t * node, size_t partition) const {
+	return _phylo.isBranchMissing(node, partition);
 }
 
 void Predictor::getBranches(pll_utree_t * node, int depth, double * cumWeight, vector<branchInfo> & branches) const {
@@ -764,6 +800,7 @@ void Predictor::evolveNode(pll_utree_t * node, const double * ancestralProbabili
 		}
 		ancestralSequence[n] = '\0';
 
+cout << "ANCESTRAL " << ancestralSequence << endl;
 		/* compute the new sequence from the probabilities */
 		char * currentSequence = (char *) malloc (n + 1);
 		mutateSequence(currentSequence, ancestralSequence, branchLength);
@@ -835,6 +872,7 @@ void Predictor::evolveNode(pll_utree_t * node, const char * ancestralSequence) {
 
 #ifdef PRINT_TRACE
 	cout << "TRACE: Mutating node " << node->clv_index << endl;
+	cout << "TRACE: From sequence " << ancestralSequence << endl;
 #endif
 #ifdef PRINT_ANCESTRAL
 	if (ancestralSequence) {
@@ -999,7 +1037,8 @@ void Predictor::predictMissingSequences( void ) {
 
 		// char * ancestral = (char *) malloc((size_t) sequenceLength + 1);
 		// double * probs = (double *) malloc((size_t) probsSize * sizeof(double));
-		char * ancestral = getAncestral(_partition, startNode);
+		char * ancestral = getAncestral(_partition, startNode, _currentModel);
+		cout << "xANCESTRAL = " << ancestral << endl;
 		// pllGetAncestralState(_tree, _partition, startNode, probs,
 		// 		ancestral, false);
 
@@ -1013,15 +1052,9 @@ void Predictor::predictMissingSequences( void ) {
 			/* discard MAP vector */
 			// free(probs);
 
-			/* extract the ancestral for the partition */
-			char * partAncestral = (char *) malloc(_partitionLength + 1);
-			memcpy(partAncestral, &(ancestral[_start]), _partitionLength);
-			partAncestral[_partitionLength] = '\0';
+			evolveNode(ancestor->back, ancestral);
+
 			free(ancestral);
-
-			evolveNode(ancestor->back, partAncestral);
-
-			free(partAncestral);
 			break;
 		}
 		case PRED_MAP: {
@@ -1112,17 +1145,11 @@ void Predictor::predictAllSequences( void ) {
 		// char * ancestral = (char *) malloc( (size_t) sequenceLength + 1);
 		// double * probs = (double *) malloc(
 		// 		(size_t) probsSize * sizeof(double));
-		char * ancestral = getAncestral(_partition, ancestor);
+		char * ancestral = getAncestral(_partition, ancestor, _currentModel);
 		// free (probs);
 
-		/* extract the ancestral for the partition */
-		char * partAncestral = (char *) malloc(_partitionLength + 1);
-		memcpy(partAncestral, &(ancestral[_start]), _partitionLength);
-		partAncestral[_partitionLength] = '\0';
+		evolveNode(ancestor->back, ancestral);
 		free(ancestral);
-
-		evolveNode(ancestor->back, partAncestral);
-		free(partAncestral);
 	}
 }
 

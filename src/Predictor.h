@@ -131,7 +131,7 @@ private:
 	 *
 	 * @return true, if the branch has missing data in the partition
 	 */
-	bool isMissingBranch(const pll_utree_t * node, size_t partition) const;
+	bool isMissingBranch(pll_utree_t * node, size_t partition) const;
 
 	/**
 	 * @brief Mutates a sequence following the current model starting from the ancestor sequence
@@ -219,6 +219,7 @@ private:
 	pll_utree_t * _tree;	            /** PLL tree */
 	pll_partition_t * _partition;	  /** PLL partition */
 	Alignment & _alignment;             /** Alignment data */
+	Phylo & _phylo;
 
 	unsigned int _partitionNumber;  /** Partition for predicting the sequences */
 	unsigned int _numberOfStates;   /** Number of different states (4 for NT, 20 for AA) */

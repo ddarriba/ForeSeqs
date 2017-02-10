@@ -44,6 +44,8 @@ public:
   pll_partition_t * getPartition( int partitionId ) { return _partitions[partitionId]; }
   std::vector<unsigned int> getMissingSequences( int partitionId ){ return _missingSequences[partitionId]; }
  	std::vector<pll_utree_t *> getMissingBranches( int partitionId ){ return _missingBranches[partitionId]; }
+
+  bool isBranchMissing( pll_utree_t * node, int partitionId );
 private:
 
   void setActivePartition( int partitionId );

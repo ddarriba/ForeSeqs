@@ -61,10 +61,9 @@ DnaModel::~DnaModel() {
 
 void DnaModel::SetupGTR( void ) {
 
-	double fracchange = computeFracchange();
-	for (size_t i = 0; i < NUM_NUC; i++) {
-		_eigenValues[i] = -_partition->eigenvals[0][i] / fracchange;
-	}
+	_eigenVecs = _partition->eigenvecs[0];
+	_eigenVals = _partition->eigenvals[0];
+	_invEigenVecs = _partition->inv_eigenvecs[0];
 
 	for (size_t i = 0; i < NUM_NUC; i++) {
 		for (size_t j = 0; j < NUM_NUC; j++) {
@@ -100,7 +99,7 @@ char DnaModel::getMostProbableState(const double * probArray) const {
 }
 
 void DnaModel::setMatrix(double * matrix, double branchLength, bool cummulative) {
-	constructPMatrix(matrix, branchLength, cummulative, NUM_NUC, _eigenValues, _Cijk);
+	constructPMatrix(matrix, branchLength, cummulative, NUM_NUC);
 }
 
 } /* namespace foreseqs */
