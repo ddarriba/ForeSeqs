@@ -3,7 +3,7 @@
  *
  *  Created on: Oct 8, 2014
  *      Author: Diego Darriba
- *      E-mail: diego.darriba@h-its.org
+ *      E-mail: diego.darriba@udc.es
  *
  *  This file is part of ForeSeqs.
  *

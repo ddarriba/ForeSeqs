@@ -3,7 +3,7 @@
  *
  *  Created on: Oct 2, 2014
  *      Author: Diego Darriba
- *      E-mail: diego.darriba@h-its.org
+ *      E-mail: diego.darriba@udc.es
  *
  *  This file is part of ForeSeqs.
  *
@@ -23,6 +23,9 @@
 
 #ifndef UTILS_H_
 #define UTILS_H_
+
+#define PRINT_TRACE 0
+#define PRINT_SEQUENCES 0
 
 #include "pll/pll.h"
 
@@ -53,7 +56,8 @@ enum DataType { DT_NUCLEIC, DT_PROTEIC};
 enum CatMode {
 	CAT_RANDOM,	/** Random per-site category */
 	CAT_ESTIMATE,	/** Estimated from existing data */
-	CAT_AVERAGE	/** Average of all categories */
+	CAT_AVERAGE,	/** Average of all categories */
+	CAT_NONE /* Do not use per-site categories */
 	};
 
 /** Mode for stealing the branch lengths */
@@ -164,7 +168,7 @@ public:
 	 *
 	 * @return The rooting node
 	 */
-	static nodeptr findRootingNode( pllInstance * pllTree, std::vector<unsigned int> * missingSequences, 
+	static nodeptr findRootingNode( pllInstance * pllTree, std::vector<unsigned int> * missingSequences,
 		nodeptr startingNode, std::vector<nodeptr> * missingBranches );
 
 	/**
@@ -175,7 +179,7 @@ public:
 	 *
 	 * @return The list of missing branches in the tree
 	 */
-	static std::vector< std::vector<nodeptr> > findMissingBranches ( pllInstance * pllTree, 
+	static std::vector< std::vector<nodeptr> > findMissingBranches ( pllInstance * pllTree,
 		partitionList * pllPartitions, std::vector< std::vector<unsigned int> > missingSequences );
 
 	/**
@@ -207,7 +211,7 @@ private:
 	 *
 	 * @return The rooting node
 	 */
-	static boolean subtreeIsMissing( pllInstance * pllTree, std::vector<unsigned int> * missingSequences, 
+	static boolean subtreeIsMissing( pllInstance * pllTree, std::vector<unsigned int> * missingSequences,
 		const nodeptr node, std::vector<nodeptr> * missingBranches );
 
 	/**
@@ -226,6 +230,7 @@ extern PredMode predictionMode;			/** Prior for predicting the sequences */
 extern unsigned int numberOfRateCategories;	/** Number of gamma rate categories */
 extern unsigned int numberOfTaxa;		/* Number of taxa */
 extern unsigned int numberOfThreads;	/* Number of threads */
+extern unsigned int numberOfPartitions; /* Number of partitions */
 extern double threshold;				/* Threshold for considering sequences as missing data */
 extern unsigned int sequenceLength;		/* Number of sites (aa/bp) */
 extern char ** taxaNames;			/* Name list of taxa */

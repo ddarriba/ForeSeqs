@@ -3,7 +3,7 @@
  *
  *  Created on: Oct 1, 2014
  *      Author: Diego Darriba
- *      E-mail: diego.darriba@h-its.org
+ *      E-mail: diego.darriba@udc.es
  *
  *  This file is part of ForeSeqs.
  *
@@ -72,7 +72,7 @@ Predictor::Predictor(pllInstance * tree, partitionList * partitions,
 	/* get taxa with missing data in the partition */
 	_missingPartsCount = (unsigned int)_missingSequences.size();
 
-	if (_missingSequences.size()) {
+	if (_missingSequences.size() && categoriesMode != CAT_NONE) {
 		if (categoriesMode != CAT_AVERAGE) {
 			_catToSite = (short *) calloc((size_t) _partitionLength, sizeof(short));
 			unsigned int * catToSiteCount;
@@ -220,7 +220,7 @@ void Predictor::mutateSequence(char * currentSequence,
 		assert(0);
 	}
 
-#ifdef PRINT_TRACE
+#if(PRINT_TRACE)
 	cout << "TRACE: Simulating sequence..." << endl;
 #endif
 
@@ -298,13 +298,19 @@ void Predictor::mutateSequence(char * currentSequence,
 		}
 		break;
 	}
+	case CAT_NONE:
+	default:
+	{
+		cerr << "Error: Undefined rate categories mode for sequence prediction" << endl;
+		assert(0);
+	}
 	}
 
 	for (size_t i=0; i<numberOfRateCategories; i++) {
 		delete[] matrix[i];
 	}
 	delete[] matrix;
-	
+
 	cout << "    - Substitutions from ancestral = " << setprecision(2) << (double)100.0*substitutionsCount/_partitionLength << "%" << endl;
 }
 
@@ -618,7 +624,7 @@ void Predictor::stealBranchRecursive(const nodeptr node) {
 
 void Predictor::evolveNode(const nodeptr node, const double * ancestralProbabilities, double * ancestralPMatrix) {
 
-#ifdef PRINT_TRACE
+#if(PRINT_TRACE)
 	cout << "TRACE: Mutating node " << node->number << endl;
 #endif
 #ifdef PRINT_ANCESTRAL
@@ -734,6 +740,12 @@ void Predictor::evolveNode(const nodeptr node, const double * ancestralProbabili
 #endif
 			break;
 		}
+		case CAT_NONE:
+		default:
+		{
+			cerr << "Error: Undefined rate categories mode for ancestral states" << endl;
+			assert(0);
+		}
 		}
 		ancestralSequence[n] = '\0';
 
@@ -808,7 +820,7 @@ void Predictor::mutatePMatrix(double * currentPMatrix,
 
 void Predictor::evolveNode(const nodeptr node, const char * ancestralSequence) {
 
-#ifdef PRINT_TRACE
+#if(PRINT_TRACE)
 	cout << "TRACE: Mutating node " << node->number << endl;
 #endif
 #ifdef PRINT_ANCESTRAL
@@ -825,7 +837,7 @@ void Predictor::evolveNode(const nodeptr node, const char * ancestralSequence) {
 	mutateSequence(currentSequence, ancestralSequence, branchLength);
 
 	if (node->number > _pllTree->mxtips) {
-#ifdef PRINT_TRACE
+#if(PRINT_TRACE)
 		cout << "TRACE: Recurse for Mutating node " << node->next->back->number
 				<< " and " << node->next->next->back->number << endl;
 #endif
@@ -896,7 +908,7 @@ void Predictor::getRootingNodes() {
 
 void Predictor::predictMissingSequences( const pllAlignmentData * originalSequence ) {
 
-#ifdef PRINT_TRACE
+#if(PRINT_TRACE)
 	for (size_t i = 0; i < _missingSequences.size(); i++) {
 		cout << "TRACE: Missing sequence " << _missingSequences[i] << endl;
 	}
@@ -955,19 +967,17 @@ void Predictor::predictMissingSequences( const pllAlignmentData * originalSequen
 	/* loop over all possible subtrees with missing data */
 	unsigned int nextAncestor = 0;
 	while (_missingSequences.size()) {
-		cout << "Predicting subtree" << endl;
+		cout << "Predicting subtree (" << _missingSequences.size() << " sequences left)" << endl;
 		assert(nextAncestor < _missingSubtreesAncestors.size());
 		nodeptr ancestor = _missingSubtreesAncestors[nextAncestor++];
 
 		nodeptr startNode = ancestor;
 
-#ifdef PRINT_TRACE
+#if(PRINT_TRACE)
 		cout << "TRACE: Updating partials for " << startNode->number << endl;
 #endif
 		pllUpdatePartialsAncestral(_pllTree, _pllPartitions, startNode, false);
-#ifdef PRINT_TRACE
-		cout << "TRACE: Generating ancestral for " << startNode->number << endl;
-#endif
+
 
 		/*
 		 * Compute probs size according to the maximum number of states.
@@ -979,6 +989,12 @@ void Predictor::predictMissingSequences( const pllAlignmentData * originalSequen
 					probsSize);
 		}
 		probsSize *= sequenceLength;
+
+		#if(PRINT_TRACE)
+				cout << "TRACE: Generating ancestral for " << startNode->number << endl;
+				cout << "TRACE: Probs size: " << probsSize << endl;
+				cout << "TRACE: Seq length: " << sequenceLength << endl;
+		#endif
 
 		char * ancestral = (char *) malloc((size_t) sequenceLength + 1);
 		double * probs = (double *) malloc((size_t) probsSize * sizeof(double));

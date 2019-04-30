@@ -1,4 +1,4 @@
-# Copyright (C) 2005 G. Hickey <hickey@cs.dal.ca>
+# Copyright (C) 2014 D. Darriba <diego.darriba@udc.es>
 #  
 # This file is free software; as a special exception the author gives
 # unlimited permission to copy and/or distribute it, with or without 
@@ -9,8 +9,8 @@
 # implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 AC_INIT([foreseqs],
-        [1.0.3],
-        [Diego Darriba diego.darriba@h-its.org])
+        [1.0.4],
+        [Diego Darriba diego.darriba@udc.es])
 AC_CONFIG_AUX_DIR(config)
 AM_CONFIG_HEADER(config.h)
 AM_INIT_AUTOMAKE([dist-bzip2])

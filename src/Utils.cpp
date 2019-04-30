@@ -3,7 +3,7 @@
  *
  *  Created on: Oct 2, 2014
  *      Author: Diego Darriba
- *      E-mail: diego.darriba@h-its.org
+ *      E-mail: diego.darriba@udc.es
  *
  *  This file is part of ForeSeqs.
  *
@@ -45,7 +45,7 @@ PredMode predictionMode = PRED_ANCSEQ;
 
 /* Number of categories hardcoded to 4 */
 unsigned int numberOfRateCategories = 4;
-unsigned int numberOfTaxa, sequenceLength;
+unsigned int numberOfTaxa, sequenceLength, numberOfPartitions;
 unsigned int numberOfThreads = 1;
 double threshold = 0;
 
@@ -157,7 +157,6 @@ vector< vector<unsigned int> > Utils::findMissingSequences( pllInstance * pllTre
 					defined_sites++;
 			}
 			if (defined_sites <= (threshold * count)) {
-				cout << "Add sequence " << i << " " << defined_sites << " " << count << " " << threshold * count << endl;
 				missingSeqs.at(part).push_back(i);
 			}
 		}
@@ -166,7 +165,7 @@ vector< vector<unsigned int> > Utils::findMissingSequences( pllInstance * pllTre
 	return missingSeqs;
 }
 
-boolean Utils::subtreeIsMissing( pllInstance * pllTree, vector<unsigned int> * missingSequences, 
+boolean Utils::subtreeIsMissing( pllInstance * pllTree, vector<unsigned int> * missingSequences,
 	const nodeptr node, vector<nodeptr> * missingBranches ) {
 
 	if (find(missingBranches->begin(), missingBranches->end(), node)
@@ -204,7 +203,7 @@ boolean Utils::subtreeIsMissing( pllInstance * pllTree, vector<unsigned int> * m
 	}
 }
 
-nodeptr Utils::findRootingNode( pllInstance * pllTree, vector<unsigned int> * missingSequences, 
+nodeptr Utils::findRootingNode( pllInstance * pllTree, vector<unsigned int> * missingSequences,
 	nodeptr startingNode, vector<nodeptr> * missingBranches ) {
 
 	nodeptr currentNode;
@@ -230,7 +229,7 @@ nodeptr Utils::findRootingNode( pllInstance * pllTree, vector<unsigned int> * mi
 			cerr << "ERROR: Everything is missing!!" << endl;
 			exit(EX_IOERR);
 		} else if (!(missingRight || missingLeft)) {
-#ifdef PRINT_TRACE
+#if(PRINT_TRACE)
 			cout << "TRACE: Found ancestor in " << currentNode->number << endl;
 #endif
 
@@ -246,7 +245,7 @@ nodeptr Utils::findRootingNode( pllInstance * pllTree, vector<unsigned int> * mi
 					(!missingRight) ?
 							currentNode->next->back :
 							currentNode->next->next->back;
-#ifdef PRINT_TRACE
+#if(PRINT_TRACE)
 			cout << "TRACE: Moving node to " << currentNode->number << endl;
 #endif
 		}
@@ -256,7 +255,7 @@ nodeptr Utils::findRootingNode( pllInstance * pllTree, vector<unsigned int> * mi
 
 static bool compareNodes (nodeptr a, nodeptr b) { return (a->number < b->number); }
 
-std::vector< std::vector<nodeptr> > Utils::findMissingBranches ( pllInstance * pllTree, partitionList * pllPartitions, 
+std::vector< std::vector<nodeptr> > Utils::findMissingBranches ( pllInstance * pllTree, partitionList * pllPartitions,
 	vector< vector<unsigned int> > missingSequences ) {
 
 	vector< vector<nodeptr> > missingBranches((size_t)pllPartitions->numberOfPartitions);
@@ -342,5 +341,4 @@ void Utils::optimizeModelParameters(pllInstance * pllTree,
 		} while (fabs(lk - pllTree->likelihood) > epsilon);
 	}
 }
-
 } /* namespace foreseqs */

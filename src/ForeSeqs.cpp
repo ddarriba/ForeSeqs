@@ -3,7 +3,7 @@
  *
  *  Created on: Oct 2, 2014
  *      Author: Diego Darriba
- *      E-mail: diego.darriba@h-its.org
+ *      E-mail: diego.darriba@udc.es
  *
  *  This file is part of ForeSeqs.
  *
@@ -256,6 +256,7 @@ int main(int argc, char * argv[]) {
 		case 'u':
 			foreseqs::predictSequences = false;
 			foreseqs::predictionMode = foreseqs::PRED_NONE;
+			foreseqs::categoriesMode = foreseqs::CAT_NONE;
 			break;
 		default:
 			exit(EX_IOERR);
@@ -401,6 +402,8 @@ int main(int argc, char * argv[]) {
 		exit(EX_IOERR);
 	}
 
+  foreseqs::numberOfPartitions = (unsigned int) pllPartitions->numberOfPartitions;
+
 	/* Initialization done */
 
 	/* Print header */
@@ -419,6 +422,7 @@ int main(int argc, char * argv[]) {
 		cout << setw(20) << left << "Threshold:" << foreseqs::threshold << endl;
 	cout << setw(20) << left << "Num.Taxa:" << foreseqs::numberOfTaxa << endl;
 	cout << setw(20) << left << "Seq.Length:" << foreseqs::sequenceLength << endl;
+	cout << setw(20) << left << "Num.Partitions:" << foreseqs::numberOfPartitions << endl;
 	cout << setw(20) << left << "Branch lengths:";
 	switch (foreseqs::branchLengthsMode) {
 	case foreseqs::BL_AVERAGE:
@@ -464,11 +468,16 @@ int main(int argc, char * argv[]) {
 
 	/* Check partitions / Warn if needed */
 
-	if (pllPartitions->numberOfPartitions == 1) {
+	if (foreseqs::numberOfPartitions == 1) {
 		cout << endl << setfill('*') << setw(54) << "" << setfill(' ') << endl
 				<< "WARNING: There is only one partition." << endl
 				<< "         Branch lengths are taken from the input tree." << endl
 				<< setfill('*') << setw(54) << "" << setfill(' ') << endl;
+	} else if (foreseqs::numberOfPartitions > PLL_NUM_BRANCHES) {
+		cerr << "[ERROR] PLL allows a maximum of "<< PLL_NUM_BRANCHES
+		     << " partitions, while input data has " << foreseqs::numberOfPartitions
+				 << ". You must recompile PLL with a larger limit." << endl;
+		return (EXIT_FAILURE);
 	} else {
 		pllPartitions->perGeneBranchLengths = PLL_TRUE; /* IMPORTANT!! */
 	}
@@ -489,7 +498,7 @@ int main(int argc, char * argv[]) {
 		return (EX_IOERR);
 	}
 
-	cout << "Seting fixed topology " << endl;
+	cout << "Setting fixed topology " << endl;
 	pllTreeInitTopologyNewick(pllTree, nt, PLL_FALSE);
 	pllNewickParseDestroy(&nt);
 
@@ -510,18 +519,52 @@ int main(int argc, char * argv[]) {
 		}
 	}
 
+	/* Find missing sequences and branches */
+	vector<vector<unsigned int> > missingSequences =  foreseqs::Utils::findMissingSequences(pllTree, pllPartitions);
+	vector<vector<nodeptr> > missingBranches = foreseqs::Utils::findMissingBranches(pllTree, pllPartitions, missingSequences);
+
+	#if(PRINT_TRACE)
+	pllTreeToNewick(pllTree->tree_string, pllTree, pllPartitions,
+			pllTree->start->back, true, true, true, false, false,
+			PLL_SUMMARIZE_LH, false, false);
+	cout << pllTree->tree_string << endl;
+	#endif
+
+	cout << endl;
+	unsigned int missingCount = 0;
+	for (size_t i = 0; i < missingBranches.size(); i++) {
+		cout << "Partition " << setw(4) << right << i << "/" << missingBranches.size();
+		if (missingBranches[i].size()) {
+		  cout << "  " << setw(5) << right << missingBranches[i].size() << " missing branches";
+			++missingCount;
+		}
+	  cout << endl;
+	#if(PRINT_TRACE)
+		cout << "    * ";
+		for (size_t j = 0; j < missingBranches[i].size(); j++) {
+			cout << missingBranches[i][j]->number << " ";
+		}
+		cout << endl;
+	#endif
+	}
+	cout << missingCount << "/" << missingBranches.size()
+	     << " partitions with missing branches" << endl << endl;
+
 	cout << "Initializing model " << endl;
+
 	pllInitModel(pllTree, pllPartitions);
+
+	cout << "Test likelihood " << endl;
 
 	pllEvaluateLikelihood(pllTree, pllPartitions, pllTree->start, true, false);
 
-#ifdef PRINT_TRACE
+#if(PRINT_TRACE)
 	cout << "TRACE: Initial log likelihood: " << pllTree->likelihood << endl;
 #endif
 
 	foreseqs::Utils::optimizeModelParameters(pllTree, pllPartitions);
 
-#ifdef PRINT_TRACE
+#if(PRINT_TRACE)
 	for (int i=0; i<pllPartitions->numberOfPartitions; i++) {
 		pllTreeToNewick(pllTree->tree_string, pllTree, pllPartitions,
 				pllTree->start->back, true, true, false, false, false,
@@ -533,24 +576,6 @@ int main(int argc, char * argv[]) {
 	currentTime = time(NULL);
 	cout << "Initiial inference done. It took " << currentTime - startTime << " seconds." << endl << endl;
 
-	/* Find missing sequences and branches */
-	vector<vector<unsigned int> > missingSequences =  foreseqs::Utils::findMissingSequences(pllTree, pllPartitions);
-	vector<vector<nodeptr> > missingBranches = foreseqs::Utils::findMissingBranches(pllTree, pllPartitions, missingSequences);
-
-#ifdef PRINT_TRACE
-	pllTreeToNewick(pllTree->tree_string, pllTree, pllPartitions,
-			pllTree->start->back, true, true, true, false, false,
-			PLL_SUMMARIZE_LH, false, false);
-	cout << pllTree->tree_string << endl;
-	for (size_t i = 0; i < missingBranches.size(); i++) {
-		cout << "PARTITION " << i << "/" << missingBranches.size() << endl;
-		cout << "  Branches: " << missingBranches[i].size() << endl;
-		for (size_t j = 0; j < missingBranches[i].size(); j++) {
-			cout << "    * " << missingBranches[i][j]->number << endl;
-		}
-	}
-#endif
-
 #if(TEST_SIM)
 	cout << endl << "T(ini,avg): ";
 	pllTreeToNewick(pllTree->tree_string, pllTree, pllPartitions,
@@ -560,7 +585,10 @@ int main(int argc, char * argv[]) {
 #endif
 
 	/* Predict sequences */
-	cout << "Predicting sequences..." << endl << endl;
+	if (foreseqs::predictSequences)
+	  cout << "Predicting missing branches and sequences..." << endl << endl;
+	else
+	  cout << "Predicting missing branches..." << endl << endl;
 	for (unsigned int rep = 0; rep < numberOfReplicates; rep++) {
 
 		if (numberOfReplicates > 1) {
@@ -615,7 +643,7 @@ int main(int argc, char * argv[]) {
 		currentTime = time(NULL);
 		cout << endl << "Prediction done. It took " << currentTime - startTime << " seconds." << endl << endl;
 
-	#ifdef PRINT_TRACE
+	#if(PRINT_SEQUENCES)
 		pllAlignmentDataDumpConsole(pllAlignment);
 	#endif
 
@@ -651,4 +679,3 @@ int main(int argc, char * argv[]) {
 
 	return (EX_OK);
 }
-
