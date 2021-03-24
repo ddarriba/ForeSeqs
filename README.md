@@ -1,4 +1,37 @@
 ForeSeqs
 ========
 
+------------------------------------------------------
 Forecasting missing sequences for multigene alignments
+------------------------------------------------------
+
+1 Installing foreseqs
+
+    Check the distributions for instructions.
+
+2 Running foreseqs
+
+    Run `man foreseqs` or `foreseqs -h` for information about the
+    command line arguments. Example run:
+
+    $ foreseqs -i examples/alignment.4 -t examples/tree.4 -q examples/partitions.4
+
+3 Branch length stealing
+
+    Stealing branch lengths averaging among partitions
+
+    $ foreseqs -i examples/alignment.4 -t examples/tree.4 -q examples/partitions.4 -b a
+
+    Stealing branch lengths estimating a partition scaler
+
+    $ foreseqs -i examples/alignment.4 -t examples/tree.4 -q examples/partitions.4 -b s
+
+4 Sequence prediction algorithm
+
+    Predicting from Marginal Ancestral Probability Vectors (MAPV)
+
+    $ foreseqs -i examples/alignment.4 -t examples/tree.4 -q examples/partitions.4 -p m
+
+    Predicting from ancestral sequences
+
+    $ foreseqs -i examples/alignment.4 -t examples/tree.4 -q examples/partitions.4 -p s
